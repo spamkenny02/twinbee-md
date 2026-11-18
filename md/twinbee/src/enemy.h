@@ -37,6 +37,7 @@ void ENEMY_init(void);
 // déplace les ennemis ; *bonus reçoit les points gagnés (bonus de groupe, ennemis détruits au contact) ;
 // contactOn = FALSE : pas de contact avec le joueur (mode debug)
 void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u16* bonus, bool contactOn);
+extern s16 enemyShotHW, enemyShotHH;                   // demi-boîte du tir testé : 8x16 (tir simple), 12x12 (tir double)
 bool ENEMY_hitByShot(s16 shotX, s16 shotY);     // coordonnées sprite du tir ; TRUE si un ennemi est détruit
 // tir chargé : centre et demi-tailles (table d'origine $CAEA : 15x20 au niveau 1, 28x52 au niveau 2) ; il traverse les ennemis
 s16 ENEMY_hitByCharged(s16 cx, s16 cy, s16 hw, s16 hh);  // renvoie le nombre d'ennemis détruits

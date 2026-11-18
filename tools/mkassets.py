@@ -6,6 +6,7 @@ sys.path.insert(0, 'tools'); import pcegfx
 from PIL import Image
 RES = 'md/twinbee/res/'; SRC = 'md/twinbee/src/'
 S = np.load('extract/sprites_pce.npy', allow_pickle=True)[0]
+S.update(np.load('extract/sprites_twin.npy', allow_pickle=True)[0])      # tir double
 def rgb(c): return (((c >> 3) & 7) * 36, ((c >> 6) & 7) * 36, (c & 7) * 36)
 def used(names):
     o = set()
@@ -13,7 +14,7 @@ def used(names):
     return sorted(o)
 FLAMES = ['halo0', 'halo1', 'halo2', 'c1a', 'c1b', 'c2s_a', 'c2s_b', 'c2m_a', 'c2m_b', 'c2t_a', 'c2t_b']
 P2 = ['body', 'bodyR', 'arm', 'bellA', 'bellB', 'pop500'] + FLAMES   # palette 2 : vaisseau, cloches, flammes
-P3 = ['cloudA', 'cloudB', 'shot', 'impA', 'impB']                     # palette 3 : nuages, tir normal (avec le HUD)
+P3 = ['cloudA', 'cloudB', 'shot', 'shotT', 'impA', 'impB']                     # palette 3 : nuages, tir normal (avec le HUD)
 pal2 = used(P2); assert len(pal2) <= 15, ('PAL2', len(pal2))
 hud = Image.open(RES + 'hud.png'); hp = hud.getpalette(); NH = 7
 pal3 = [tuple(hp[i * 3:i * 3 + 3]) for i in range(1, NH + 1)]
@@ -43,8 +44,19 @@ S.update(np.load('extract/sprites6.npy', allow_pickle=True)[0])
 S.update(np.load('extract/sprites910.npy', allow_pickle=True)[0])     # types 9 (soucoupes) et 10 (vaisseaux en formation, 32x16)
 S.update(np.load('extract/sprites_gnd.npy', allow_pickle=True)[0])    # ennemis au sol (types 13/14/15) et bombe
 S.update(np.load('extract/sprites11.npy', allow_pickle=True)[0])      # type 11 (mi-boss) et 12 (ses projectiles)      # type 6 (spirale)       # type 8 (vaisseaux en demi-tour)
+# cloches colorées (ramassages) : la couleur change les 3 teintes du corps (PCE : palette de sprite 0 = jaune, 1 bleu, 5 noire, 7 blanche, 3 verte, 4 rouge, 6 violette)
+def _code(rgbs): r, g, b = (int(ch) for ch in rgbs); return (g << 6) | (r << 3) | b
+BELL_YEL = [_code('741'), _code('761'), _code('421')]
+BELL_COLS = {1: ('127', '057', '114'), 2: ('222', '333', '111'), 3: ('446', '667', '223'), 4: ('153', '175', '122'), 5: ('711', '733', '411'), 6: ('114', '125', '112')}      # violette PCE = 526/637/223, approchée ici par des bleus sombres (PAL2 n'a pas de magenta ; le plus proche automatique la rendait grise, comme la blanche)
+   # code cloche (octet $35EC) -> teintes
+BELLV = []
+for k, cols in BELL_COLS.items():
+    for f in ('A', 'B'):
+        mp = dict(zip(BELL_YEL, [_code(c) for c in cols]))
+        S['bellv%d%s' % (k, f)] = np.vectorize(lambda c: mp.get(int(c), int(c)) if c >= 0 else -1)(S['bell' + f])
+        BELLV.append('bellv%d%s' % (k, f))
 _p = np.full((32, 32), -1, S['ex0'].dtype); _p[7:23, 8:24] = S['ex0']; S['ex0p'] = _p      # petite boule d'explosion dans une image 32x32 (une seule feuille par explosion)
-M34 = ['e3a', 'e3b', 'e4a', 'e4b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e11b', 'e11c', 'e9a', 'e9b', 'e9c', 'e9d', 't10_19', 't10_20', 't10_21', 't10_22', 't10_23', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb']
+M34 = ['e3a', 'e3b', 'e4a', 'e4b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e11b', 'e11c', 'e9a', 'e9b', 'e9c', 'e9d', 't10_19', 't10_20', 't10_21', 't10_22', 't10_23', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb'] + BELLV
 for n in M34:
     for c in S[n][S[n] >= 0].tolist(): need[c] += 0
 approx_map = {c: min(pal2, key=lambda p: dist(c, p)) for c in need}
@@ -61,11 +73,11 @@ def sheet(name, frames, lut, palette):
     o = Image.fromarray(im, 'P'); o.putpalette(palette); o.save(RES + name + '.png')
     res.append('SPRITE %s "%s.png" %d %d NONE 0' % (name, name, w // 8, h // 8))
 p3v = [255, 0, 255] + p3[3:]
-for name, frames, pl in [('spr_body', ['body', 'bodyR'], 2), ('spr_arm', ['arm'], 2), ('spr_bell', ['bellA', 'bellB'], 2), ('spr_pop500', ['pop500'], 2),
+for name, frames, pl in [('spr_body', ['body', 'bodyR'], 2), ('spr_arm', ['arm'], 2), ('spr_bell', ['bellA', 'bellB'] + BELLV, 2), ('spr_pop500', ['pop500'], 2),
                          ('spr_halo', ['halo0', 'halo1', 'halo2'], 2), ('spr_c1', ['c1a', 'c1b'], 2), ('spr_c2s', ['c2s_a', 'c2s_b'], 2),
                          ('spr_c2m', ['c2m_a', 'c2m_b'], 2), ('spr_c2t', ['c2t_a', 'c2t_b'], 2),
                          ('spr_enemy', ['enA', 'enB', 'enC', 'e3a', 'e3b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e9a', 'e9b', 'e9c', 'e9d', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb'], 2), ('spr_en10', ['t10_19', 't10_20', 't10_21', 't10_22', 't10_23'], 2), ('spr_en4', ['e4a', 'e4b', 'e11b', 'e11c'], 2), ('spr_ex0', ['ex0'], 2), ('spr_exm', ['ex0p', 'ex1', 'ex2', 'ex3'], 2), ('spr_ex', ['ex1', 'ex2', 'ex3'], 2),
-                         ('spr_shot', ['shot'], 3), ('spr_imp', ['impA', 'impB'], 3), ('spr_cloud', ['cloudA', 'cloudB'], 3)]:
+                         ('spr_shot', ['shot', 'shotT'], 3), ('spr_imp', ['impA', 'impB'], 3), ('spr_cloud', ['cloudA', 'cloudB'], 3)]:
     lut, palette = (i2, p2) if pl == 2 else (i3, p3v)
     sheet(name, frames, lut, palette)
 import mkboss

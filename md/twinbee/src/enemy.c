@@ -932,6 +932,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     }
 }
 
+s16 enemyShotHW = 8, enemyShotHH = 16;
 bool ENEMY_hitByShot(s16 shotX, s16 shotY)
 {
     s16 i;
@@ -941,7 +942,7 @@ bool ENEMY_hitByShot(s16 shotX, s16 shotY)
         const s16 dx = shotX - (enemies.x[i] - 8);
         const s16 dy = shotY - (enemies.y[i] - 8);
         if ((enemies.on[i] != 1) || ((KIND[i] == 14) || (KIND[i] == 15)) || (enemies.y[i] < 0) || ((KIND[i] == 12) && (state[i] == 1))) continue;       // les 12 premiers projectiles du mi-boss sont intouchables       // hors écran (au-dessus) : intouchable
-        if ((dx > -(8 + HWK(KIND[i]))) && (dx < 8 + HWK(KIND[i])) && (dy > -(16 + SHHK(KIND[i]))) && (dy < 16 + SHHK(KIND[i])))
+        if ((dx > -(enemyShotHW + HWK(KIND[i]))) && (dx < enemyShotHW + HWK(KIND[i])) && (dy > -(enemyShotHH + SHHK(KIND[i]))) && (dy < enemyShotHH + SHHK(KIND[i])))
         {
             if (((KIND[i] == 11) || (KIND[i] == 13)) && (--hp[i] > 0)) return TRUE;         // le mi-boss encaisse 16 tirs
             if (KIND[i] == 13) { bossDeathT = 1; enemies.on[i] = 0; return TRUE; }

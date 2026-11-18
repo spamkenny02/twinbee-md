@@ -30,6 +30,24 @@ static u16 nextCloud;
 static s32 cloudFy[MAX_CLOUDS], bellFy[MAX_BELLS];      // positions verticales 8.8
 static s16 cloudSpeed[MAX_CLOUDS], cloudAge[MAX_CLOUDS];
 static s16 bellV[MAX_BELLS], bellAge[MAX_BELLS];
+static u8 bellCol[MAX_BELLS];           // couleur de la cloche (octet $35EC de l'objet) : 0 jaune, 1 bleue, 2 noire, 3 blanche, 4 verte, 5 rouge, 6 violette
+static u8 bellCnt;                      // compteur global ($C4) : avance à chaque apparition et à chaque tir reçu par une cloche
+// table de la routine $17:$AB96 : une cloche colorée tous les 5 tirs, dans l'ordre noire, blanche, bleue, verte, rouge, violette
+static const u8 bellTab[30] = { 2,0,0,0,0, 3,0,0,0,0, 1,0,0,0,0, 4,0,0,0,0, 5,0,0,0,0, 6,0,0,0,0 };
+
+// nouvelle couleur de cloche ; une couleur dont le bonus est déjà acquis redevient jaune (règles lues en $17:$ABC2-$AC2E, un seul joueur)
+static u8 bellRoll(void)
+{
+    u8 v;
+    const s16 f = player.flags;
+    if (++bellCnt >= 30) bellCnt = 0;
+    v = bellTab[bellCnt];
+    if ((v == 3) && (f & PW_TWIN)) v = 0;
+    else if ((v == 4) && (f & PW_OPT1)) v = 0;
+    else if ((v == 5) && (f & (PW_BARRIER | PW_OPT2))) v = 0;
+    else if ((v == 6) && (f & (PW_OPT2 | PW_BARRIER))) v = 0;
+    return v;
+}
 static s16 popOn[MAX_POPUPS], popX[MAX_POPUPS], popY[MAX_POPUPS];
 static s16 impTimer[2], impX[2], impY[2];
 static u32 shownScore;
@@ -175,6 +193,10 @@ void STAGE_init(void)
 #endif
     memset(popOn, 0, sizeof(popOn));
     nextCloud = 0;
+#ifndef DBG_BELLCNT
+#define DBG_BELLCNT 0
+#endif
+    bellCnt = DBG_BELLCNT;
     prevPlayerX = PLAYER_START_X; prevPlayerY = PLAYER_START_Y;
     shownLives = START_LIVES;
     memset(prevShot, 0, sizeof(prevShot)); memset(prevCharged, 0, sizeof(prevCharged));
@@ -195,7 +217,7 @@ static void spawnBell(s16 x, s16 y)
     {
         if (stage.bellOn[i]) continue;
         stage.bellOn[i] = TRUE; stage.bellX[i] = x; stage.bellY[i] = y;
-        bellFy[i] = (s32) y << 8; bellV[i] = BELL_V0; bellAge[i] = 0;
+        bellFy[i] = (s32) y << 8; bellV[i] = BELL_V0; bellAge[i] = 0; bellCol[i] = bellRoll();
         return;
     }
 }
@@ -214,7 +236,12 @@ static void spawnPopup(s16 x, s16 y)
 // un tir normal détruit le premier ennemi qu'il touche (100 points)
 static void shotVsEnemies(s16* active, s16 sx, s16 sy, s16 n)
 {
-    if (!*active || !ENEMY_hitByShot(sx, sy)) return;
+    if (!*active) return;
+    {
+        const bool tw = n ? player.shot2Tw : player.shotTw;
+        enemyShotHW = tw ? 12 : 8; enemyShotHH = tw ? 12 : 16;
+    }
+    if (!ENEMY_hitByShot(sx, sy)) return;
     *active = FALSE;
     impTimer[n] = 2; impX[n] = sx; impY[n] = sy;
     stage.score += ENEMY_SCORE;
@@ -253,7 +280,7 @@ static void shotCollisions(s16* active, s16 sx, s16 sy, s16 n)
         // zone en losange : |dx| + dy <= 24 (mesuré : dx=0 touche à dy=23, pas à 25 ; dx=8 ne touche pas à dy=22)
         if ((dx >= -14) && (dx <= 14) && (dy >= -8) && ((abs(dx) + dy) <= 24))
         {
-            if (bellV[j] > BELL_V_NOHIT) bellV[j] = BELL_V_HIT;     // la cloche repart vers le haut
+            if (bellV[j] > BELL_V_NOHIT) { bellV[j] = BELL_V_HIT; bellCol[j] = bellRoll(); }     // la cloche repart vers le haut ; nouvelle couleur
             *active = FALSE;                        // le tir est consommé
             impTimer[n] = 2; impX[n] = sx; impY[n] = sy;
             break;
@@ -284,6 +311,15 @@ void STAGE_update(void)
         {
             stage.bellOn[i] = FALSE;
             stage.score += BELL_SCORE;
+            switch (bellCol[i])     // effets lus en $17:$AFE2 et suivants
+            {
+                case 1: if (player.speedLvl < 0x12) player.speedLvl += 2; break;
+                case 2: if (player.speedLvl > 0) player.speedLvl -= 2; break;
+                case 3: player.flags = (player.flags & ~0x08) | PW_TWIN; break;
+                case 4: player.flags |= PW_OPT1; break;
+                case 5: player.flags |= PW_BARRIER; break;
+                case 6: player.flags |= PW_OPT2; break;
+            }
             spawnPopup(stage.bellX[i] - 8, stage.bellY[i] - 2);
             continue;
         }
@@ -396,7 +432,7 @@ bells:
     {
         SPR_setVisibility(sBell[i], stage.bellOn[i] ? VISIBLE : HIDDEN);
         if (!stage.bellOn[i]) continue;
-        SPR_setFrame(sBell[i], (bellAge[i] >> 3) & 1);
+        SPR_setFrame(sBell[i], bellCol[i] * 2 + ((bellAge[i] >> 3) & 1));
         SPR_setPosition(sBell[i], stage.bellX[i] + PF_XOFF, stage.bellY[i]);
     }
     for (i = 0; i < MAX_POPUPS; i++)

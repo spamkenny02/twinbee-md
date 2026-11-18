@@ -62,16 +62,18 @@ void PLAYER_init(void)
     player.x = PLAYER_START_X;
     player.y = PLAYER_START_Y;
     player.lives = START_LIVES;
+    player.speedLvl = PLAYER_SPEED_LVL0;
     phaseTimer = 0;
 }
 
 static void updateShip(u16 joy)
 {
+    const s32 spd = 0x80 + player.speedLvl * 0x40;
 
-    if (joy & BUTTON_RIGHT) fx += PLAYER_SPEED;
-    if (joy & BUTTON_LEFT) fx -= PLAYER_SPEED;
-    if (joy & BUTTON_DOWN) fy += PLAYER_SPEED;
-    if (joy & BUTTON_UP) fy -= PLAYER_SPEED;
+    if (joy & BUTTON_RIGHT) fx += spd;
+    if (joy & BUTTON_LEFT) fx -= spd;
+    if (joy & BUTTON_DOWN) fy += spd;
+    if (joy & BUTTON_UP) fy -= spd;
     if (fx < ((s32) PLAYER_MIN_X << 8)) fx = (s32) PLAYER_MIN_X << 8;
     if (fx > ((s32) PLAYER_MAX_X << 8)) fx = (s32) PLAYER_MAX_X << 8;
     if (fy < ((s32) PLAYER_MIN_Y << 8)) fy = (s32) PLAYER_MIN_Y << 8;
@@ -130,8 +132,8 @@ static void updateShots(u16 joy, u16 frame)
     if (shotTimer && (--shotTimer == 0))
     {
         // position prise au moment de l'appui, pas à l'apparition
-        if (shotPending == 1) { player.shotActive = TRUE; player.shotX = pendX; player.shotY = pendY; }
-        else { player.shot2Active = TRUE; player.shot2X = pendX; player.shot2Y = pendY; }
+        if (shotPending == 1) { player.shotActive = TRUE; player.shotX = pendX; player.shotY = pendY; player.shotTw = (player.flags & PW_TWIN) ? 1 : 0; }
+        else { player.shot2Active = TRUE; player.shot2X = pendX; player.shot2Y = pendY; player.shot2Tw = (player.flags & PW_TWIN) ? 1 : 0; }
         shotPending = 0;
     }
 
@@ -187,9 +189,9 @@ static void drawShots(u16 frame)
     const u16 flash = (!(frame & 1) && (((frame + 10) & 15) < 8)) ? 1 : 0;   // alternance des 2 palettes PCE
 
     SPR_setVisibility(sShot, player.shotActive ? VISIBLE : HIDDEN);
-    if (player.shotActive) place(sShot, player.shotX, player.shotY);
+    if (player.shotActive) { SPR_setFrame(sShot, player.shotTw); place(sShot, player.shotX, player.shotY); }
     SPR_setVisibility(sShot2, player.shot2Active ? VISIBLE : HIDDEN);
-    if (player.shot2Active) place(sShot2, player.shot2X, player.shot2Y);
+    if (player.shot2Active) { SPR_setFrame(sShot2, player.shot2Tw); place(sShot2, player.shot2X, player.shot2Y); }
 
     {
         // halo : table de l'original indexée par (compteur global >> 3) & 3 ; la phase 0 n'affiche rien
@@ -288,6 +290,7 @@ void PLAYER_update(u16 joy, u16 frame)
                 if (--player.lives <= 0) player.gameOver = TRUE;
                 player.phase = 2; phaseTimer = 0;
                 player.armLost = 0; player.armBlink = 0; player.armTimer = 0;
+                player.speedLvl = PLAYER_SPEED_LVL0; player.flags = 0;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
                 player.x = PLAYER_START_X; player.y = RESPAWN_Y;
                 player.inv = RESPAWN_INV;
             }

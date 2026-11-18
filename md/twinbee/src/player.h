@@ -36,6 +36,12 @@
 #define CONTACT_ARM     1           // un bras encaisse : l'ennemi est détruit, pas le joueur
 #define CONTACT_BODY    2           // le corps est touché : le joueur meurt, l'ennemi est détruit
 
+#define PW_OPT1    0x01     // option 1 (cloche verte)
+#define PW_OPT2    0x02     // option 2 (cloche violette)
+#define PW_TWIN    0x04     // tir double (cloche blanche)
+#define PW_BARRIER 0x80     // cloche rouge
+#define PLAYER_SPEED_LVL0 4
+
 // état lisible de l'extérieur (sert aussi à la vérification automatique en émulation)
 typedef struct
 {
@@ -53,6 +59,9 @@ typedef struct
     s16 armLost;            // bras perdus ($34A5) : bit 0 = gauche, bit 1 = droit ; remis à zéro à la réapparition
     s16 armBlink;           // bras qui clignote ($38E7) : 0 aucun, 1 gauche, 2 droit
     s16 armTimer;           // minuteur de clignotement ($387A), ARM_BLINK_FRAMES puis -1 par frame
+    s16 speedLvl;           // niveau de vitesse ($3954) : 4 au départ, +2 par cloche bleue (max 18), -2 par cloche noire ; vitesse = 0x80 + niveau * 0x40 (table $C91D)
+    s16 flags;              // bonus ($3438) : voir PW_*
+    s16 shotTw, shot2Tw;    // le tir en vol est un tir double (sprite et boîte de collision plus larges)
     s16 armHidden;          // bras non dessinés cette frame (bit 0 gauche, bit 1 droit) : sert à la vérification
 } PlayerState;
 
