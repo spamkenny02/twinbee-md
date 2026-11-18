@@ -374,3 +374,8 @@ Dans l'original, un ennemi qui touche un bras est détruit sans tuer le joueur ;
 - Ennemis : tables communes `e2types.h`, données par stage (`E2Data`), pools de sprites plafonnés (14/8/4/3) car la VRAM sprites est à la limite.
 - Boss du stage 3 (soleil jaune, 63226 -> 72259) : non fait. Les objets 104-107 (types 4/5) sont une chaîne de pièces qui saute d'une frame à l'autre ; la chronologie est la même avec ou sans tir (le boss ne dépend pas du joueur). Le stage se termine provisoirement 300 frames après la fin du défilement.
 - TEST_SKIP (stage.c) : saute à 50 frames de la fin du défilement, pour tester les enchaînements.
+
+## Jalon 22 — Stage 4
+- Stage 4 intégré : décor (stitch3 + scroll RAM, 701 tuiles, 38 événements palette), nuages (39), ennemis rejoués (types 39–47, 241 templates, pools 14/8/0/3), tirs génériques.
+- Testé sous émulateur (START_STAGE=4, captures 500..4500) : pas de crash, rendu conforme aux dumps PCE.
+- Reste : boss stages 2/3/4 (fin provisoire scrollFrames+300), stages 5/6 (run idle avec dumps requis), tirs des ennemis sol, cloches/items, score, son.

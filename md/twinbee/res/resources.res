@@ -28,6 +28,8 @@ TILESET stage2_tileset "stage2.png" BEST ALL
 MAP stage2_map "stage2.png" stage2_tileset BEST 0
 TILESET stage3_tileset "stage3.png" BEST ALL
 MAP stage3_map "stage3.png" stage3_tileset BEST 0
+TILESET stage4_tileset "stage4.png" BEST ALL
+MAP stage4_map "stage4.png" stage4_tileset BEST 0
 SPRITE spr_e2_0 "e2_0.png" 2 2 NONE 0
 SPRITE spr_e2_1 "e2_1.png" 2 4 NONE 0
 SPRITE spr_e2_2 "e2_2.png" 4 2 NONE 0
@@ -36,3 +38,7 @@ SPRITE spr_e3_0 "e3_0.png" 2 2 NONE 0
 SPRITE spr_e3_1 "e3_1.png" 2 4 NONE 0
 SPRITE spr_e3_2 "e3_2.png" 4 2 NONE 0
 SPRITE spr_e3_3 "e3_3.png" 4 4 NONE 0
+SPRITE spr_e4_0 "e4_0.png" 2 2 NONE 0
+SPRITE spr_e4_1 "e4_1.png" 2 4 NONE 0
+SPRITE spr_e4_2 "e4_2.png" 4 2 NONE 0
+SPRITE spr_e4_3 "e4_3.png" 4 4 NONE 0

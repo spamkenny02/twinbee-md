@@ -72,6 +72,7 @@ import mkboss
 res += mkboss.build(RES, SRC)
 res += ['TILESET stage2_tileset "stage2.png" BEST ALL', 'MAP stage2_map "stage2.png" stage2_tileset BEST 0']
 res += ['TILESET stage3_tileset "stage3.png" BEST ALL', 'MAP stage3_map "stage3.png" stage3_tileset BEST 0']
+res += ['TILESET stage4_tileset "stage4.png" BEST ALL', 'MAP stage4_map "stage4.png" stage4_tileset BEST 0']
 open(RES + 'resources.res', 'w').write('\n'.join(res) + '\n')
 
 # ---- tuiles du HUD : vide, chiffres 0-9, jauge (5 tuiles x 6 états)

@@ -65,6 +65,7 @@ static Sprite *sEnemy[MAX_SPR16], *sEx[MAX_EX], *sEn10[MAX_SPR10];
 #include "boss_data.h"
 #include "stage2_enemies.h"
 #include "stage3_enemies.h"
+#include "stage4_enemies.h"
 #define E2_POOL_MAX 14
 static const E2Data* E2;
 static Sprite* sE2[4][E2_POOL_MAX];
@@ -173,7 +174,7 @@ void ENEMY_init(void)
     if (stageNo >= 2)
     {
         s16 c;
-        E2 = (stageNo == 2) ? &e2data_2 : &e2data_3;
+        E2 = (stageNo == 2) ? &e2data_2 : (stageNo == 3) ? &e2data_3 : &e2data_4;
         for (c = 0; c < 4; c++) for (i = 0; i < E2->pool[c]; i++)
         {
             sE2[c][i] = SPR_addSprite(E2->spr[c], 0, -64, TILE_ATTR(PAL2, FALSE, FALSE, FALSE));
