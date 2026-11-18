@@ -60,7 +60,7 @@ int main(bool hard)
             }
             if ((stageClearTimer > 150) && (joy & ~prevJoy & BUTTON_START))
             {
-                if (stageNo < 4) stageNo++; else { SPR_reset(); TITLE_run(); stageNo = START_STAGE; }
+                if (stageNo < 6) stageNo++; else { SPR_reset(); TITLE_run(); stageNo = START_STAGE; }
                 start(); prevJoy = JOY_readJoypad(JOY_1);
                 continue;
             }

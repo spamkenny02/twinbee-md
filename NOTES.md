@@ -379,3 +379,11 @@ Dans l'original, un ennemi qui touche un bras est détruit sans tuer le joueur ;
 - Stage 4 intégré : décor (stitch3 + scroll RAM, 701 tuiles, 38 événements palette), nuages (39), ennemis rejoués (types 39–47, 241 templates, pools 14/8/0/3), tirs génériques.
 - Testé sous émulateur (START_STAGE=4, captures 500..4500) : pas de crash, rendu conforme aux dumps PCE.
 - Reste : boss stages 2/3/4 (fin provisoire scrollFrames+300), stages 5/6 (run idle avec dumps requis), tirs des ennemis sol, cloches/items, score, son.
+
+## Jalon 23 — Stages 5 et 6
+- Run PCE à vide avec dumps (dumps/s5.script : trace 92000–124000, dump toutes les 40 frames) → décor, ennemis (types 48–58 et 60–76), tirs, nuages.
+- Stage 5 : décor périodique (512 px) + fin ; 6918 px. Stage 6 : 3071 px, 9318 frames.
+- Nouveaux outils : `prepimg.py` (limite à 30 couleurs, fusion de tiles rares), `mergeidx.py` (fusion des tiles indexées jusqu'à 700), `mdpal_dyn.py` avec affinité de slots. Perte visuelle ≈1–2 % des pixels (blocs visibles par endroits).
+- E2_MAX_PIECES 8 → 12 (un ennemi du stage 6 a 11 pièces). Avertissement connu : un delta pièce hors s8 dans stage6_enemies.h (une pièce mal placée).
+- Les ennemis au sol du stage 5 (cristaux/plateformes) ne sont pas rejoués (pool sol = 0).
+- Jeu jouable des stages 1 à 6 ; fin de chaque stage 2–6 provisoire (scrollFrames+300), pas de boss.

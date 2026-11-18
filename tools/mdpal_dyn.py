@@ -19,6 +19,7 @@ def main():
     vals, cnt = np.unique(img, return_counts=True); backdrop = int(vals[cnt.argmax()])
     slot = [[None] * 15 for _ in range(K)]          # couleur dans chaque emplacement
     last = [[10 ** 9] * 15 for _ in range(K)]       # dernière ligne de tiles qui s'en est servie
+    home = {}
     outidx = np.zeros((H, W), np.uint8); events = []; bad_tiles = 0; bad_px = 0
     for r in range(TH - 1, -1, -1):
         def free(k, j): return slot[k][j] is None or last[k][j] >= r + WIN
@@ -30,7 +31,7 @@ def main():
                 have = set(slot[k]); new = [c for c in s if c not in have]
                 nfree = sum(1 for j in range(15) if free(k, j) and slot[k][j] not in s)
                 if len(new) <= nfree:
-                    cand = (len(new), -nfree, k)
+                    cand = (len(new), -sum(1 for c in new if home.get(c, (None,))[0] == k), -nfree, k)
                     if best is None or cand < best: best = cand
             if best is None:
                 # aucun emplacement : palette dont les couleurs sont les plus proches
@@ -39,12 +40,13 @@ def main():
                     return sum(min(int(((rgb3(c) - rgb3(x)) ** 2).sum()) for x in cs) for c in s)
                 k = min(range(K), key=cost); bad_tiles += len(groups[s])
             else:
-                k = best[2]
+                k = best[3]
                 for c in s:
                     if c in slot[k]: continue
                     # emplacement libre le plus anciennement inutilisé (les vides d'abord)
                     cands = [j for j in range(15) if free(k, j) and slot[k][j] not in s]
-                    j = max(cands, key=lambda j: (slot[k][j] is None, last[k][j]))
+                    j = max(cands, key=lambda j: (home.get(c) == (k, j), slot[k][j] is None, last[k][j]))
+                    home[c] = (k, j)
                     slot[k][j] = c; last[k][j] = r; events.append((r, (first + k) * 16 + 1 + j, mdcol(c)))
             m = {backdrop: (first + k) * 16}
             for c in s:

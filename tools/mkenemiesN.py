@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Stage 2 : ennemis rejoués depuis la trace sans tir (extract/s2_inst.pkl) -> res/e2_*.png + src/stage2_enemies.h
 Chaque instance = type, frame d'apparition, position de départ, gabarit de trajectoire (deltas par frame + indice d'image)."""
-E2_MAX_PIECES_ALLOWED = 8
+E2_MAX_PIECES_ALLOWED = 12
 import sys, pickle, collections, numpy as np, math, re
 from PIL import Image
 sys.path.insert(0, 'tools'); import pcegfx, pcesprites
@@ -88,6 +88,7 @@ with open(SRC + 'stage%d_enemies.h' % N, 'w') as f:
             j = i
             while j < len(fis) and fis[j] == fis[i] and j - i < 255: j += 1
             RF.append(fis[i]); RL.append(j - i); i = j
+    print("PT", len(PT), "cnt", cnt)
     assert len(PT) < 256 and cnt <= E2_MAX_PIECES_ALLOWED
     for t, (o, n, r) in zip(tlist, offs):
         dd = [PT[PI[o + k]] for k in range(n)]

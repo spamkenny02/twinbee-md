@@ -7,6 +7,8 @@
 #include "stage2_data.h"
 #include "stage3_data.h"
 #include "stage4_data.h"
+#include "stage5_data.h"
+#include "stage6_data.h"
 
 StageState stage;
 u8 stageNo = 1;                         // 1 ou 2 : stage en cours (choisi avant STAGE_init)
@@ -105,9 +107,19 @@ void STAGE_init(void)
 
     // décor sur le plan B (palettes 0 et 1, glissantes)
     {
-        const TileSet* ts = (stageNo == 4) ? &stage4_tileset : (stageNo == 3) ? &stage3_tileset : (stageNo == 2) ? &stage2_tileset : &stage1_tileset;
-        const MapDefinition* md = (stageNo == 4) ? &stage4_map : (stageNo == 3) ? &stage3_map : (stageNo == 2) ? &stage2_map : &stage1_map;
-        if (stageNo == 4)
+        const TileSet* ts = (stageNo == 6) ? &stage6_tileset : (stageNo == 5) ? &stage5_tileset : (stageNo == 4) ? &stage4_tileset : (stageNo == 3) ? &stage3_tileset : (stageNo == 2) ? &stage2_tileset : &stage1_tileset;
+        const MapDefinition* md = (stageNo == 6) ? &stage6_map : (stageNo == 5) ? &stage5_map : (stageNo == 4) ? &stage4_map : (stageNo == 3) ? &stage3_map : (stageNo == 2) ? &stage2_map : &stage1_map;
+        if (stageNo == 6)
+        {
+            palEv = stage6_pal_events; palEvN = STAGE6_NUM_PAL_EVENTS; mapH = STAGE6_MAP_H; scrollTab = stage6_scroll; scrollFrames = STAGE6_SCROLL_FRAMES;
+            cloudTab = stage6_clouds; cloudN = STAGE6_NUM_CLOUDS; backdropCol = STAGE6_BACKDROP;
+        }
+        else if (stageNo == 5)
+        {
+            palEv = stage5_pal_events; palEvN = STAGE5_NUM_PAL_EVENTS; mapH = STAGE5_MAP_H; scrollTab = stage5_scroll; scrollFrames = STAGE5_SCROLL_FRAMES;
+            cloudTab = stage5_clouds; cloudN = STAGE5_NUM_CLOUDS; backdropCol = STAGE5_BACKDROP;
+        }
+        else if (stageNo == 4)
         {
             palEv = stage4_pal_events; palEvN = STAGE4_NUM_PAL_EVENTS; mapH = STAGE4_MAP_H; scrollTab = stage4_scroll; scrollFrames = STAGE4_SCROLL_FRAMES;
             cloudTab = stage4_clouds; cloudN = STAGE4_NUM_CLOUDS; backdropCol = STAGE4_BACKDROP;

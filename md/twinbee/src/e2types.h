@@ -3,7 +3,7 @@
 #define E2TYPES_H
 #include <genesis.h>
 #include "resources.h"
-#define E2_MAX_PIECES 8
+#define E2_MAX_PIECES 12
 typedef struct { u8 cls, img, flip; s8 dx, dy; } E2Piece;
 typedef struct { u8 n; E2Piece p[E2_MAX_PIECES]; } E2Frame;
 typedef struct { u32 off; u16 len; u16 roff; } E2Tpl;
