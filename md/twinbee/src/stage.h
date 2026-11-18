@@ -5,7 +5,7 @@
 
 #define PLAYFIELD_H     208         // 26 lignes de tiles pour le terrain, 2 pour le HUD (fenêtre)
 #define MAX_CLOUDS      8
-#define MAX_BELLS       8
+#define MAX_BELLS       5
 #define MAX_POPUPS      4
 
 #define CLOUD_EXIT_Y    240         // un nuage disparaît en bas à y >= 240

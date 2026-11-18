@@ -4,5 +4,6 @@ import sys, numpy as np
 sys.path.insert(0, 'tools'); import pcegfx, pcesprites
 vram, sat, pal, reg = pcegfx.load('dumps/pw04/q3440')
 t = pcesprites.sprite(vram, pal, 495, 16, 16, 4)
-np.save('extract/sprites_twin.npy', np.array([{'shotT': t}], dtype=object), allow_pickle=True)
+orb = pcesprites.sprite(vram, pal, 481, 16, 16, 0)     # option : mini-abeille qui suit la trajectoire du joueur
+np.save('extract/sprites_twin.npy', np.array([{'shotT': t, 'orb': orb}], dtype=object), allow_pickle=True)
 print(sorted(set(t[t >= 0].tolist())), np.load('extract/sprites_pce.npy', allow_pickle=True)[0]['shot'].tolist() == t.tolist())

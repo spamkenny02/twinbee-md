@@ -9,6 +9,10 @@ static s16 shotTimer;               // délai avant apparition du tir normal (0 
 static s16 chargedTimer, chargedPending, shotPending;
 static s16 pendX, pendY, pendCX, pendCY;     // position du joueur au moment de l'appui / du relâchement
 
+static Sprite *sOrb[3];
+#define TRAIL_N 24
+static s16 trailX[TRAIL_N], trailY[TRAIL_N];     // historique de la position du joueur (une entrée par frame)
+static bool trailOn;
 static Sprite *sBody, *sArmL, *sArmR, *sShot, *sShot2, *sHalo;
 static s16 phaseTimer, deathX, deathY;
 static u16 lastFrame;
@@ -33,6 +37,7 @@ void PLAYER_init(void)
     sBody = add(&spr_body, PAL2, 1);
     sArmL = add(&spr_arm, PAL2, 2);
     sArmR = add(&spr_arm, PAL2, 2);
+    { s16 i; for (i = 0; i < 3; i++) { sOrb[i] = add(&spr_orb, PAL2, 2); SPR_setVisibility(sOrb[i], HIDDEN); } }
     sHalo = add(&spr_halo, PAL2, 0);
     sShot = add(&spr_shot, PAL3, 3);
     sShot2 = add(&spr_shot, PAL3, 3);
@@ -290,7 +295,7 @@ void PLAYER_update(u16 joy, u16 frame)
                 if (--player.lives <= 0) player.gameOver = TRUE;
                 player.phase = 2; phaseTimer = 0;
                 player.armLost = 0; player.armBlink = 0; player.armTimer = 0;
-                player.speedLvl = PLAYER_SPEED_LVL0; player.flags = 0;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
+                player.speedLvl = PLAYER_SPEED_LVL0; player.flags = 0; trailOn = FALSE;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
                 player.x = PLAYER_START_X; player.y = RESPAWN_Y;
                 player.inv = RESPAWN_INV;
             }
@@ -316,6 +321,17 @@ void PLAYER_update(u16 joy, u16 frame)
     }
     if (player.inv) player.inv--;
     updateShip(joy);
+    {   // historique de position pour les options (trois mini-abeilles, retard de 7, 15 et 23 frames)
+        s16 i;
+        const bool opt = (player.flags & (PW_OPT1 | PW_OPT2)) != 0;
+        if (opt && !trailOn) for (i = 0; i < TRAIL_N; i++) { trailX[i] = player.x; trailY[i] = player.y; }
+        trailOn = opt;
+        if (opt)
+        {
+            for (i = TRAIL_N - 1; i > 0; i--) { trailX[i] = trailX[i - 1]; trailY[i] = trailY[i - 1]; }
+            trailX[0] = player.x; trailY[0] = player.y;
+        }
+    }
     updateShots(joy, frame);
     prevJoy = joy;
     lastJoy = joy;
@@ -346,6 +362,15 @@ void PLAYER_draw(void)
     {
         SPR_setVisibility(sBody, blink ? HIDDEN : VISIBLE); SPR_setVisibility(sArmL, blink ? HIDDEN : VISIBLE); SPR_setVisibility(sArmR, blink ? HIDDEN : VISIBLE);
         drawShip(lastJoy);
+    }
+    {
+        s16 i;
+        const bool show = trailOn && (player.phase == 0) && !blink;
+        for (i = 0; i < 3; i++)
+        {
+            SPR_setVisibility(sOrb[i], show ? VISIBLE : HIDDEN);
+            if (show) place(sOrb[i], trailX[7 + 8 * i] - 8, trailY[7 + 8 * i] - 12);
+        }
     }
     drawShots(lastFrame);
 }

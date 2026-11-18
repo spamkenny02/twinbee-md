@@ -7,6 +7,7 @@ SPRITE spr_body "spr_body.png" 2 2 NONE 0
 SPRITE spr_arm "spr_arm.png" 2 2 NONE 0
 SPRITE spr_bell "spr_bell.png" 2 2 NONE 0
 SPRITE spr_pop500 "spr_pop500.png" 4 2 NONE 0
+SPRITE spr_orb "spr_orb.png" 2 2 NONE 0
 SPRITE spr_halo "spr_halo.png" 2 2 NONE 0
 SPRITE spr_c1 "spr_c1.png" 2 4 NONE 0
 SPRITE spr_c2s "spr_c2s.png" 2 8 NONE 0

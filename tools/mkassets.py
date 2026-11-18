@@ -56,7 +56,7 @@ for k, cols in BELL_COLS.items():
         S['bellv%d%s' % (k, f)] = np.vectorize(lambda c: mp.get(int(c), int(c)) if c >= 0 else -1)(S['bell' + f])
         BELLV.append('bellv%d%s' % (k, f))
 _p = np.full((32, 32), -1, S['ex0'].dtype); _p[7:23, 8:24] = S['ex0']; S['ex0p'] = _p      # petite boule d'explosion dans une image 32x32 (une seule feuille par explosion)
-M34 = ['e3a', 'e3b', 'e4a', 'e4b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e11b', 'e11c', 'e9a', 'e9b', 'e9c', 'e9d', 't10_19', 't10_20', 't10_21', 't10_22', 't10_23', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb'] + BELLV
+M34 = ['e3a', 'e3b', 'e4a', 'e4b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e11b', 'e11c', 'e9a', 'e9b', 'e9c', 'e9d', 't10_19', 't10_20', 't10_21', 't10_22', 't10_23', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb', 'orb'] + BELLV
 for n in M34:
     for c in S[n][S[n] >= 0].tolist(): need[c] += 0
 approx_map = {c: min(pal2, key=lambda p: dist(c, p)) for c in need}
@@ -73,7 +73,7 @@ def sheet(name, frames, lut, palette):
     o = Image.fromarray(im, 'P'); o.putpalette(palette); o.save(RES + name + '.png')
     res.append('SPRITE %s "%s.png" %d %d NONE 0' % (name, name, w // 8, h // 8))
 p3v = [255, 0, 255] + p3[3:]
-for name, frames, pl in [('spr_body', ['body', 'bodyR'], 2), ('spr_arm', ['arm'], 2), ('spr_bell', ['bellA', 'bellB'] + BELLV, 2), ('spr_pop500', ['pop500'], 2),
+for name, frames, pl in [('spr_body', ['body', 'bodyR'], 2), ('spr_arm', ['arm'], 2), ('spr_bell', ['bellA', 'bellB'] + BELLV, 2), ('spr_pop500', ['pop500'], 2), ('spr_orb', ['orb'], 2),
                          ('spr_halo', ['halo0', 'halo1', 'halo2'], 2), ('spr_c1', ['c1a', 'c1b'], 2), ('spr_c2s', ['c2s_a', 'c2s_b'], 2),
                          ('spr_c2m', ['c2m_a', 'c2m_b'], 2), ('spr_c2t', ['c2t_a', 'c2t_b'], 2),
                          ('spr_enemy', ['enA', 'enB', 'enC', 'e3a', 'e3b', 'e7a', 'e7b', 'e8a', 'e8b', 'e6a', 'e12', 'e11a', 'e9a', 'e9b', 'e9c', 'e9d', 'g13a', 'g13b', 'g14a', 'g14b', 'bomb'], 2), ('spr_en10', ['t10_19', 't10_20', 't10_21', 't10_22', 't10_23'], 2), ('spr_en4', ['e4a', 'e4b', 'e11b', 'e11c'], 2), ('spr_ex0', ['ex0'], 2), ('spr_exm', ['ex0p', 'ex1', 'ex2', 'ex3'], 2), ('spr_ex', ['ex1', 'ex2', 'ex3'], 2),
