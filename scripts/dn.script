@@ -1,0 +1,8 @@
+1560 keys 08
+1570 keys 00
+1700 keys 08
+1710 keys 00
+2900 poke 2087=03
+2860 trace dn
+9000 traceoff x
+9002 end x

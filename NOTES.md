@@ -1,0 +1,376 @@
+# Portage Detana!! TwinBee (PC Engine) → Mega Drive / SGDK — Jalon 1
+
+ROM : HuCard 512 Ko, 64 banques de 8 Ko, CRC32 5CF59D80.
+Vecteurs : RESET $E000, IRQ1/VDC $E0F1, TIMER $E424.
+
+## Contenu de l'archive
+- `tools/pcedump/main.cpp` : frontal headless pour l'émulateur Geargrafx (entrées scriptées, dump VRAM / SAT / palette / registres VDC / RAM, carte du code exécuté). Se compile contre les sources Geargrafx (GPLv3, non incluses).
+- `tools/pcegfx.py` : dump → PNG (palettes, planche de tiles, BAT complet, sprites à l'écran, info.json).
+- `tools/disasm6280.py` : désassembleur HuC6280 guidé par le code exécuté + suivi de flux statique.
+- `tools/findgfx.py` : recherche des tiles VRAM tels quels dans la ROM.
+- `disasm/` : listings par banque + `summary.txt`.
+- `extract/` : graphismes extraits (écran titre, stage 1 à 4 instants).
+- `dumps/*_sheet.png` : planches de captures (boot/attract, partie stage 1).
+
+## Carte des banques (état actuel)
+| Banque | Vue en | Rôle (déduit) | Fiabilité |
+|---|---|---|---|
+| 00 | $E000 | Noyau : reset, IRQ, VDC, manettes, changement de banques | sûr |
+| 01 | $C000 | Routines d'affichage (accès VDC intensifs) | probable |
+| 02 | $4000 | Pilote sonore (seule banque avec le noyau à écrire sur le PSG) | probable |
+| 0B | $4000 | Logique de jeu (aucun accès matériel) | probable |
+| 0C | $6000 | Logique de jeu, appelle 0B | probable |
+| 14 | $C000 | Effets de palette (écritures VCE) | probable |
+| 15 | $C000 | Logique de jeu | probable |
+| 17 | $A000 | Logique de jeu | probable |
+| 0D-0F | ? | Densité de JSR/RTS typique de code, jamais exécuté dans mes sessions (autres niveaux ?) | hypothèse |
+| 18-1A, 35-36 | – | Données graphiques de l'écran titre (quelques tiles non compressés) | indice |
+| 22-25 | – | Données graphiques du stage 1 | indice |
+| 37, 3F | – | Vides ($FF) | sûr |
+| reste | – | Données non identifiées (graphismes compressés, niveaux, musiques) | à faire |
+
+Code tracé : 26 007 octets, dont 17 044 réellement exécutés (boot + attract + ~2 min de stage 1).
+
+## Constats importants pour le portage
+- **Graphismes compressés** : seuls 3-4 % des tiles en VRAM se retrouvent tels quels en ROM. Soit on documente le décompresseur, soit on extrait tout par dump VRAM en émulation (ce que fait déjà l'outillage).
+- **Affichage** : image 256 px de large ; BAT virtuel 64×64 tiles (512×512), le HUD est stocké à droite du terrain dans le même BAT (split raster à prévoir → plan Window ou second plan sur MD).
+- **Couleurs, stage 1** : 8-9 palettes de fond (38-41 couleurs uniques) et 4-6 palettes de sprites (34-48 couleurs uniques) simultanées ; 60 couleurs distinctes max mesurées à l'écran. La MD offre 4×15+1 = 61 couleurs : jouable, mais il faudra regrouper les palettes tile par tile.
+- Les couleurs PCE (9 bits) se convertissent sans perte vers la MD (9 bits).
+- **Sprites** : 16×16 à 32×32 observés ; la table en contient 64, comme la limite PCE (80 sur MD).
+
+## Limites connues
+- 3 sauts indirects et 32 appels inter-banques non résolus (voir `summary.txt`) : code encore non désassemblé derrière.
+- Seuls le titre et une partie du stage 1 ont été joués ; les autres niveaux ne sont pas encore couverts.
+- Les étiquettes des vecteurs TIMER/IRQ ne sont pas encore nommées dans les listings.
+
+# Jalon 2 — décor du stage 1, défilement et HUD sur Mega Drive
+
+## Résultat
+- `md/twinbee/out/rom.bin` : ROM Mega Drive (128 Ko) compilée avec SGDK. Mode H32 (256×224), décor sur le plan B via le moteur MAP de SGDK, HUD sur le plan fenêtre (2 lignes du bas).
+- Commandes de test : **C** avance rapide, **A** pause du défilement, **START** retour au début.
+- Vitesse : 1/3 px par frame, mesurée sur l'original (358 px en 1080 frames).
+
+## Chaîne de fabrication
+1. `tools/pcedump` joue le stage 1 en entier (vies figées par `poke 2087=03`, l'adresse du compteur de vies) et dumpe la mémoire vidéo toutes les 24 frames.
+2. `tools/stitch.py` recolle le fond sans sprites → `extract/stage1.png` (256×6208).
+3. `tools/mdpal_dyn.py` répartit les tiles sur 2 palettes Mega Drive « glissantes » et produit la carte indexée + la table d'événements de palette (`src/stage1_pal.h`).
+4. `tools/mdbuild.sh` compile (rescomp + m68k-elf-gcc + libmd précompilée de SGDK).
+5. `tools/mdshot` (frontal libretro pour Genesis Plus GX) capture la ROM, `tools/mdcompare.py` compare au décor PCE.
+
+## Chiffres
+- Stage 1 : 53 couleurs de fond au total, 9 max par tile, 762 tiles 8×8 uniques (683 dans le tileset MD après dédoublonnage avec miroirs).
+- Palettes fixes : impossible sans perte (5 % de pixels modifiés avec 3 palettes).
+- Palettes glissantes : 2 palettes suffisent, 76 changements de couleur sur tout le niveau, 29 pixels modifiés sur 1 589 248 (4 tiles, sur le boss). Les palettes 2 et 3 restent libres pour les sprites (le HUD occupe 7 couleurs de la palette 3).
+
+## Vérification (émulateur Genesis Plus GX)
+- 38 captures réparties sur tout le niveau : 0 pixel de différence avec le décor PCE, sauf l'écran final (les 29 pixels ci-dessus).
+- HUD : 0 pixel de différence avec la capture PCE.
+- START, C et A testés.
+
+## Écarts connus avec l'original
+- Le HUD est une image fixe (score, vies, jauge non animés).
+- L'original n'affiche que 240 px de large (8 px noirs de chaque côté) et 209 lignes de terrain ; la ROM MD montre les 256 px et 208 lignes.
+- L'original démarre par un défilement rapide (2 px/frame) au-dessus de la forêt ; ici la vitesse est constante. La longueur de cette forêt, très répétitive, est la partie la moins sûre du recollage.
+- Le boss (crabe) fait partie du décor dans l'original ; il apparaît donc figé en haut de la carte.
+- Les couleurs sont écrites pendant l'affichage (`PAL_setColor`) : à déplacer dans le VBlank pour éviter des points parasites sur vraie console.
+- Compilé ici avec m68k-elf-gcc 9.3 (paquet gendev) contre la libmd précompilée de SGDK ; non testé avec la chaîne Windows officielle ni sur console.
+
+# Jalon 3 — TwinBee jouable (déplacements, tir, tir chargé)
+
+## Résultat
+- `md/twinbee/out/rom.bin` : décor + HUD du jalon 2, plus le vaisseau contrôlable.
+- Manette : croix = déplacement, **B** = tir (tenir pour charger, relâcher pour le tir chargé), **C** = avance rapide du décor (debug), **START** = retour au début du décor.
+- Code : `src/player.c` / `src/player.h` (toutes les constantes mesurées sont dans `player.h`).
+
+## Ce qui a été mesuré sur l'original (traces RAM + table de sprites, frame par frame)
+| Élément | Valeur | Source |
+|---|---|---|
+| Position joueur | RAM `$20BB` (X), `$20BD` (Y) | trace |
+| Vitesse | 1,5 px/frame par axe (virgule fixe, alternance 1/2 px) | trace |
+| Limites | X 16..225, Y 24..198 (zone de 240 px ; +8 px à l'écran MD) | trace |
+| Départ 1P | (64, 159) | trace |
+| Vaisseau | 3 sprites 16×16 : corps + 2 bras ; pose inclinée à gauche/droite | table de sprites |
+| Tir normal | à l'appui, apparaît 2 frames après en (x-8, y-14), 6 px/frame, un seul à l'écran | trace |
+| Compteur de charge | RAM `$20A6`, +1 par frame bouton tenu, plafonné à 40 | trace |
+| Halo de charge | visible à partir de 14, en (x-8, y-24) | trace |
+| Tir chargé niveau 1 | relâchement avec compteur 12..39 ; 2 sprites 16×32 en y-6 | trace |
+| Tir chargé niveau 2 | compteur à 40 ; 3 colonnes 16×64 en y-38 + traîne 16×32 | trace |
+| Invincibilité | RAM `$380D` (minuteur), utilisé pour les mesures | trace |
+
+## Vérification
+`tools/mdtest_player.py` rejoue sur la ROM MD les mêmes entrées que trois traces PCE et compare la RAM des deux machines :
+- position du joueur : 5 503 frames comparées, 0 différente (la MD réagit une frame plus tôt que la PCE) ;
+- compteur de charge : 0 frame différente ;
+- tirs chargés niveaux 1 et 2 : 798 frames où le tir est présent des deux côtés, toutes à la même position ;
+- tir normal : mêmes positions tant que le tir PCE existe (545 frames sur 615). Les écarts viennent des collisions : sur PCE le tir disparaît en touchant un nuage ou une cloche, ce qui libère le tir suivant plus tôt ; la ROM MD n'a encore ni cibles ni collisions.
+- Contrôle visuel du vaisseau (pose neutre et inclinée) : `md/shots/zoom3.png`.
+
+## Palettes
+- PAL0-1 : décor (glissantes). PAL2 : vaisseau + tir normal (14 couleurs). PAL3 : HUD + flammes des tirs chargés (12 couleurs).
+- Les palettes de sprites PCE 0 à 6 sont constantes pendant le stage 1.
+
+## Non fait / incertain
+- Bombe (bouton I de la PCE), cloches, nuages, ennemis, collisions, mort, 2e joueur.
+- Jauge de charge du HUD (toujours image fixe).
+- Seuil exact du tir chargé niveau 1 : entre 9 et 12 frames (8 ne donne rien, 12 oui) ; réglé à 12.
+- Animation du halo et clignotement des flammes : cadence approchée, non comparée frame par frame.
+- Coexistence tir normal / tir chargé et nombre max de tirs avec les power-ups : non testés.
+- Les changements de palette du décor sont maintenant écrits juste après le VBlank.
+
+# Jalon 4 — nuages, cloches, score, jauge de charge
+
+## Résultat
+- `md/twinbee/out/rom.bin` : stage 1 avec le défilement exact de l'original, nuages, cloches, ramassage (500 points, pastille « 500 »), score et jauge de charge dans le HUD.
+- Manette : croix, **B** tir/charge, **C** jeu accéléré ×4 (debug), **START** recommencer le stage.
+- Code : `src/stage.c` / `stage.h` (défilement, nuages, cloches, HUD), `src/stage1_data.h` (tables générées), `tools/mkassets.py` (génère sprites, tuiles HUD et tables).
+
+## Mesures faites sur l'original
+| Élément | Valeur | Fiabilité |
+|---|---|---|
+| Défilement | RAM `$20B5` ; 2 px/frame pendant ~585 frames, puis 85/256 px/frame, accélération avant le boss (4 px/frame sur 48 frames), arrêt après 5982 px. Stocké frame par frame. | exact |
+| Nuages | 29 dans le stage, apparition à y=-48, x fixe, 0,5 ou 0,75 px/frame, indépendants du joueur (2 parties comparées) | exact |
+| Cloche libérée | tir dans un nuage → cloche en (nuage.x+8, nuage.y+6), une par nuage, le tir continue | vérifié |
+| Trajectoire cloche | vitesse -488/256, gravité 12/256 par frame, chute max 3 px/frame, sort à y≥216 | 1 px d'écart ponctuel |
+| Tir sur cloche | relance à -500/256, le tir est consommé (impact 2 frames) ; tests de collision une frame sur deux | vérifié sur 5 rebonds |
+| Zone de touche | losange `|dx| + dy <= 24` | déduit de 6 cas |
+| Ramassage | cloche à moins de 13 px du centre du joueur → 500 points | 17 parties (seuil entre 12 et 14) |
+| Cadence de tir | appui refusé 8 frames après le tir précédent, accepté à 12 | partiel |
+| Jauge | largeur remplie = charge arrondie au pair, blanche à 40 | exact |
+| Retard des commandes | 1 frame (la ROM le reproduit maintenant) | exact |
+
+## Vérification (`tools/mdtest_stage.py`, mêmes entrées sur PCE et MD)
+- Partie sans entrée, 15 407 frames : nuages identiques sur toutes les frames, défilement identique (la variable RAM PCE est en avance d'une frame sur l'affichage MD).
+- Joueur : 0 frame différente sur les 4 parties rejouées (10 374 frames).
+- Scénario « ramassage » (217 frames) : cloches identiques sauf 3 frames à 1 px, score 500 des deux côtés.
+- Scénario « tirs répétés » : cloches identiques (à 1 px près sur 18 frames) pendant 313 frames et 5 rebonds, puis divergence à la frame 3713 : la ROM accepte un appui d'une seule frame que l'original ignore.
+- Partie longue avec ennemis côté PCE : nuages et joueur identiques, cloches non comparables (les ennemis absorbent des tirs).
+- Comparaison visuelle : `md/shots/compare4.png`.
+
+## Non fait / incertain
+- Règle exacte d'acceptation d'un tir (appuis très brefs, cadence entre 9 et 12 frames).
+- Changement de couleur des cloches au 5e tir (observé : palette 7 et décalage de 4 px), cloches déjà colorées à la sortie de certains nuages, effets des bonus. Les cloches restent jaunes.
+- Série de scores (seul le 500 est vérifié), durée exacte de la pastille (réglée à 28 frames).
+- Tirs chargés contre nuages et cloches : aucune collision pour l'instant.
+- Cloche au-dessus de l'écran (y<0) : considérée intouchable (observé à y=-12 seulement).
+- Ennemis, bombe, mort, boss, son.
+- Palettes : PAL2 14 couleurs (vaisseau, cloches, flammes), PAL3 14 couleurs (HUD, nuages, tir). Il reste 2 emplacements libres.
+
+# Jalon 5 — routine de tir d'origine, première vague d'ennemis
+
+## Méthode
+Nouveau mode `watch` dans `tools/pcedump` : exécution pas à pas qui note quelle instruction écrit une adresse RAM, avec la pile. Il a servi à localiser les routines dans le désassemblage, lues ensuite directement.
+
+## Routine de tir (banque $01, $CA34-$CD54) — maintenant reproduite telle quelle
+- Deux emplacements de tir normal (A puis B) : deux tirs à l'écran au maximum.
+- Délai de 4 posé à chaque tir (`$37A0`), qui ne décompte que les frames où le bouton est tenu ou vient d'être pressé. C'est ce qui expliquait les appuis « ignorés ».
+- Charge (`$A6`) : +1 par frame tenue, plafond $28 ; relâchement à partir de $0C = niveau 1, à $28 = niveau 2 ; pas de charge tant qu'un tir chargé est à l'écran. Le seuil du halo est $0C aussi (j'avais 14).
+- Halo : image choisie par (compteur global >> 3) & 3, la phase 0 n'affiche rien.
+- Le tir part de la position du joueur au moment de l'appui.
+- Collisions tir/nuage et tir/cloche : chaque cible est testée une frame sur deux selon la parité de son numéro d'objet (nuages = objets 90+, cloches = 89 en descendant) ; à sa frame d'apparition, un tir teste tous les nuages.
+- Non repris : la variante de tir chargé « type 3 » et les tirs latéraux (bonus).
+
+## Structure des objets de l'original (utile pour la suite)
+Tableaux parallèles de $6D objets : X `$2B47` (+ haut `$2ADA`, fraction `$2BB4`), Y `$2C8E` (+ `$2C21`, `$2CFB`), vitesse X `$3063`/`$30D0`, vitesse Y `$313D`/`$31AA`, accélérations `$3217`/`$3284`, état `$2F89`, image `$2A6D`, demi-tailles de collision `$3369`/`$33D6`. Joueur = objet 0, tirs = 20 et 22, ennemis de la vague 1 = 66 à 71. Les sprites sont affichés 2 frames après le calcul (position - 8). Helpers en banque $0B : `$4111` (vitesse depuis angle et vitesse, table de sinus `$FEB8`), `$4E21`/`$4E4B` (déplacement), `$414C` (animation). Le script d'apparition des ennemis est indexé par le défilement (`$42B3`, pointeur `$97`).
+
+## Vague 1 (routine banque $0C, $6181 et $61DB)
+- 6 ennemis, un toutes les 17 frames à partir de la frame de jeu 936, depuis (-8, 0), angle 3, vitesse $12.
+- Ligne droite jusqu'à `|joueur.x - ennemi.x| < 32`, puis virage : +1 cran d'angle (11,25°) toutes les 12 frames à la vitesse $20, plus le défilement du sol.
+- Destruction : 100 points, explosion de 31 frames ; +1000 quand la vague entière est détruite (observé une seule fois).
+- Tirs chargés : traversent et détruisent (boîtes de la table `$CAEA`).
+
+## Vérification
+- Modèle Python (`tools/enemy_sim.py`) contre la RAM PCE : 3 367 positions sur 3 parties, 0 différente.
+- ROM contre RAM PCE (`tools/mdtest_stage.py`) : partie immobile 241 frames, partie en mouvement 305 frames : 0 différente.
+- Joueur et nuages : toujours 0 frame différente sur toutes les parties.
+- Cloches : scénario ramassage identique (3 frames à 1 px) ; tirs répétés identique jusqu'à la frame 3717 ; partie longue identique jusqu'à la frame 3388 (avant le jalon : 3222).
+- Capture `md/shots/compare5.png` : à entrées identiques (frame 3964), tir chargé, explosions et score 600 des deux côtés.
+
+## Écarts restants connus
+- Cloches : sur PCE la cloche se décale de 4 px vers la gauche et change de palette au 5e tir, puis revient ; non reproduit, et c'est la cause de la divergence à 3717. Cause de la divergence à 3388 non identifiée (la ROM libère une cloche que l'original ne libère pas).
+- Les destructions d'ennemis ne sont donc pas comparables sur les parties où les cloches ont déjà divergé. Boîte de collision tir/ennemi déduite des tables de demi-tailles et d'un seul cas observé.
+- Ennemis : couleurs approchées faute de place en palette (7 couleurs remplacées par la plus proche, PAL2 est pleine). Ils ne tirent pas encore (routine `$6919` / `$444C`), ne touchent pas le joueur, et seule la vague 1 existe.
+- Compilé et testé uniquement en émulation (Genesis Plus GX).
+
+# Jalon 6 — toutes les vagues de type 5, contact, mort et réapparition
+
+## Script d'apparition des ennemis (décodé)
+- Banque $0B, table à `$5E1A` (186 entrées de 4 octets pour le stage 1), lue par la routine `$42B3` : octets 0-1 = position de défilement (÷4) + colonne x (×8), octet 2 = type (bit 7 = groupe), octet 3 = drapeaux (bit 7/6 = entrées spéciales, dont les nuages).
+- Les groupes passent par un séquenceur (`$49DC`, 8 emplacements à `$3BD0`) avec tables `$46B5`/`$46D3`/`$46F1` (délai, nombre, type).
+- Relevé sur une partie de référence : 546 apparitions, 15 types. `extract/waves_stage1.json`.
+
+## Ennemi de type 5 (routine `$6100`-`$61DB`), maintenant complet
+- 12 groupes de 6 dans le stage (72 ennemis), table générée dans `stage1_data.h`.
+- Drapeau bit 1 : arrive par la droite (x = 248) et vire dans l'autre sens. Bit 0 : part en visant le joueur (routine `$4030` transcrite, tables `$40CD` et `$410D`), angle borné.
+- Sortie : uniquement par le bas (y ≥ 256).
+- Vérification ROM contre RAM PCE : partie immobile 2 758 frames avec ennemi, partie en mouvement 2 007 frames : 0 différente. Modèle Python : 25 252 positions, 0 différente sans tir ; 66 sur 9 026 dans la partie avec tirs (cas non élucidé d'un ennemi né tout près du joueur).
+
+## Mort et réapparition (mesurées, `player.c`)
+- Contact → explosion 25 frames → chute 3 px/frame (au moins 52 frames et jusqu'en bas) → réapparition en (64, 255), montée de 2 px/frame pendant 48 frames, invincibilité 192 frames avec clignotement 4/4.
+- Vérifié sur une partie : mort à la frame 3832 (PCE 3831), commandes rendues à 3977 (PCE 3976).
+- Vies : 3 au départ, affichées dans le HUD. À 0, le stage recommence (provisoire : le game over de l'original n'a pas été observé, les vies étaient figées dans mes parties).
+- **Bouton A tenu = invincible** (debug) : les comparaisons automatiques s'en servent, car les parties PCE de référence sont invincibles.
+
+## Écart important découvert : les bras
+Dans l'original, un ennemi qui touche un bras est détruit sans tuer le joueur ; le bras se met à clignoter, et il faut plusieurs contacts avant la mort (partie « m1 » : 2 ennemis absorbés par le bras gauche aux frames 3826 et 3842, mort au 3e à 3861). La ROM tue au premier contact (frame 3828 sur la même partie). La boîte de contact de `enemy.h` a été ajustée sur 12 parties sans distinguer bras et corps : à refaire en lisant la routine de collision du joueur.
+
+## Autres limites
+- Seul le type 5 existe : les 14 autres types (dont les types 3 et 4, qui tuent un joueur immobile à la frame 4111 dans l'original) et les tirs ennemis restent à faire.
+- La table d'apparition est relevée sur une partie (frames), pas encore lue depuis le script indexé par le défilement.
+- 6 explosions simultanées au maximum (VRAM de sprites).
+- Cloches : mêmes écarts qu'au jalon 5.
+
+# Jalon 7 — bras, contact exact, ennemis de type 3 et 4
+
+## Contact ennemi → joueur (banque $17, boucle `$AD2B`, gestionnaire `$AFE2`)
+- Contact si |px−ex| < 10+demi-largeur et |py−ey| < 7+demi-hauteur (demi-tailles lues en RAM : type 5 = 4×5, type 3 = 5×5, type 4 = 2×11).
+- Si |dx| ≥ 7+demi-largeur : zone des bras (routines `$AF67/$AF84/$AF9F/$AFB0`). Un bras disponible absorbe le coup : l'ennemi est détruit (+100), le bras clignote 32 frames puis est perdu. Sans bras disponible l'ennemi passe. Corps touché : mort du joueur (l'ennemi est aussi détruit).
+- Joueur en réapparition (invincible) : seuls les ennemis de type 5 sont ignorés ; bras restaurés à la réapparition.
+- Test après déplacement, une frame sur deux (`$83 & 1 == 1`) ; les événements MD apparaissent +2 frames après les lignes PCE = décalage d'affichage des sprites (ENEMY_LAG), c'est l'alignement correct à l'écran.
+- Vérifié (m1, m3 : bras ; m2, m4 : mort ; m4 : 3e mort au PCE 4111 = MD 4113) ; non-régression cb / cc : 0 frame différente.
+
+## Types 3 et 4 (navets/radis, banque $0C)
+- Apparition en (x0, −32) (x0 = 24, 56, 88… relevés sur 63 événements), vitesse constante 0x22 via `velocity(angle, 34)`, angle visé une fois pour toutes (`aim`), ligne droite.
+- Sortie : y ≥ 256, ou x < −32, ou x > 271 (fenêtre observée).
+- Type 3 : sprite 16×16 (affiché en x−8, y−8) ; type 4 : 16×32 (x−8, y−16). Pas de groupe (pas de bonus de vague).
+- Vérifié : positions identiques à la PCE sur cc (2 701 / 2 797 frames) et cb (1 270 / 1 325), 0 différence.
+- Couleurs approchées sur PAL2 (erreur 15 552 contre 75 168 avec PAL3).
+- Limite SGDK : 80 sprites au maximum ; pool partagé de 3 sprites par type (`MAX_MISSILE_SPR`), donc au plus 3 ennemis de chaque type affichés en même temps.
+
+## Jalon 8 — tirs contre les types 3 et 4 (partie « ch »)
+- Tir normal : demi-hauteur ennemie 0 pour les types 3/4 (|dy| < 16 ; le type 5 garde 21).
+- Ennemi au-dessus de l'écran (y < 0) : intouchable par les tirs.
+- Faisceau chargé niveau 2 : demi-largeur 27 (au lieu de 28) ; le niveau 1 inchangé.
+- Résultat sur « ch » : type 3 : 0 frame différente sur 378 (avant : 137) ; type 4 : 1 sur 500 (avant : 117), un faisceau niveau 2 détruit un type 4 une frame trop tôt (f4884). Contacts/bras/mort inchangés (m1, m3, m4, cb, cc).
+
+## Non résolu
+- Période d'animation des types 3/4 (8 frames supposé), explosion, points des types 3/4 (+100 supposé), tirs ennemis, bombe, boss, 12 types restants, son.
+
+# Jalon 9 — ennemis de type 7 (nacelles en formation) et tirs ennemis (analyse)
+
+## Type 7 (routine `$6234`, banque $0C) — décodé et porté
+- Groupes de 6 toutes les 17 frames, x = 48 (indicateur bit 0 = 0) ou 192 (bit 0 = 1), 90 apparitions sur le stage 1 (`stage1_pod7[]`, relevées sur la partie de référence).
+- Apparition à y = −48, vitesse verticale initiale `$200 + 2*rang + $80` = `$288` (rang de difficulté `$8F` = 4 dans toutes les traces ; constante dans la ROM).
+- État 1 : descend ; passe à l'état 2 quand (y+$50) ≥ $CE ou quand y joueur < (y+$50) (octets bas).
+- État 2 (24 frames) : accélération ay = −16, ax = ±18 (signe selon le côté) ; état 3 : arrêt 96 frames ; état 4 (24 frames) : vitesse mémorisée (vy inversée), accélération ax = ∓16, ay = −16 ; état 5 : vx = 0, remonte à vy ≈ −648 et disparaît dès que y < −48.
+- Image alternée toutes les 6 frames pendant les états 2 et 4. Demi-tailles de collision 2×5, 1 coup pour détruire.
+- Vérifié : modèle Python (`tools/enemy7_sim.py`) = RAM PCE sur 90 apparitions, 22 050 frames, 0 différence ; ROM = PCE : 0 différence sur 3 941 frames (cc) et 1 931 (cb).
+- Ressources : les ennemis 16×16 (types 3, 5, 7) partagent un pool de 12 sprites ; MAX_ENEMIES passe de 12 à 18 (comme les 18 emplacements `66..83` de l'original), nécessaire car deux groupes de 6 se chevauchent.
+
+## Tirs ennemis : pas encore utiles au début du stage
+- Routine `$6919` : chaque ennemi a un paramètre de cadence (`$39C1`, 1 pour le type 7) ; un compteur (`$3A2E`, un incrément toutes les 2 frames) déclenche la création d'une balle (routine `$444C` → objet de type 1, boîte 1×1) quand il atteint une valeur lue dans la table `$695F` selon le rang de difficulté `$8F` et le numéro de niveau `$B1`. Au rang 4 la valeur est ≥ 128 compteurs, soit plus de 250 frames : les nacelles (245 frames de vie) ne tirent jamais au début ; la première balle des traces apparaît en frame 15 847. À reprendre avec les ennemis suivants.
+
+## Non résolu
+- Tir chargé de niveau 1 contre le type 7 : la ROM détruit l'ennemi une frame trop tôt (3 frames différentes sur « ch »). La boîte du tir chargé demande de lire la boucle de collision tir/ennemi de l'original au lieu de l'ajuster.
+- Les parties mortelles m1 à m3 montrent un écart d'un pixel sur le type 5 né à la frame 3817 (non vérifié si antérieur au jalon 9).
+- Groupes de type 7 : bonus de destruction complète non relevé ; ennemis de type 8 (frame 5454), 12 (6754), 6, 9, 10, 11, 13 à 15 à faire.
+
+# Jalon 10 — ennemis de type 8 (vaisseaux en demi-tour)
+
+## Type 8 (routine `$648B`, banque $0C)
+- Arrivent par le côté : bit 0 = 0 → x = −8, angle 3 ; bit 0 = 1 → x = 248, angle 13 ; y = −32 ; vitesse `$24` (table de sinus `$FEB8` via `$4111`). 54 apparitions relevées + 1 relevée sur la partie cb (frame 8300, absente de la partie cc car les 18 emplacements d'objets de l'original étaient pleins).
+- État 1 : ligne droite jusqu'à ce que (y+$60) (16 bits) sorte de 0..255 ou que y joueur (octet bas) < (y+$60) (octet bas) ; état 2 : demi-tour, un cran d'angle toutes les 3 frames (+1 côté gauche, −1 côté droit), 16 crans, vitesse inchangée ; état 3 : ligne droite dans le sens opposé jusqu'à sortir de l'écran (x < −32 ou x > 271, y ≥ 256).
+- Image 0x144 / 0x145 selon la parité de l'angle, demi-tailles de collision 4×5, un coup pour détruire.
+- Tir au rang 4 : jamais (`$6915` avec seuil 6 ≥ rang).
+- Vérifié : modèle Python = RAM PCE sur 54 apparitions, 10 962 frames, 0 différence ; ROM = PCE : 0 différence sur cb (1 719 frames) ; sur cc (2 549 frames) la différence vient uniquement de l'apparition ajoutée de la frame 8300.
+
+## Limites
+- Couleurs approchées : PAL2 n'a pas de vert, donc les vaisseaux verts de la PCE sont rendus en rouge/orange (palette sprites MD pleine).
+- Tir normal contre le type 8 : 1 frame différente sur « ch » (même famille d'écart que les types 4 et 7).
+- Il reste les types 12 (frame 6754), 6, 9, 10, 11 et 13 à 15, les tirs ennemis (quand le rang ≥ 6), la bombe, le boss, le son.
+
+## Jalon 11 : ennemis de type 6 (spirale, routine $637B de la banque $0C)
+- 61 apparitions dans le stage 1 (33 par la droite x=248, 28 par la gauche x=-8, y=200, vitesse $26, `extract/ev6.pkl`), table `stage1_pod6`, vitesses `ship6_vel` (vitesse 38 via `velocity`).
+- Machine à états (modèle `tools/enemy6_sim.py`, 0 écart sur les 61 objets de la partie cc) : angle initial 0x17 (droite) ou 0x19 (gauche) ; état 1 : 6 crans toutes les 7 frames (sens −1 pour la droite) ; état 2 : 26 frames droites ; état 3 : 62 crans toutes les 5 frames (sens inverse) ; état 4 : 26 frames droites ; état 5 : crans toutes les 7 frames (sens du 1) jusqu'à la sortie par le bas (y >= 256).
+- Affichage : un seul motif 16x16 (pattern $150), retourné horizontalement toutes les 8 frames ; clignote une image sur deux pendant les 48 premières frames (parité de la frame PCE + celle de l'apparition).
+- Collision : demi-tailles 5x5. Zone de tir (SHH) non mesurée (0 par défaut), aucune trace ne tire sur le type 6. Aucun tir ennemi : le compteur $3A2E tourne mais aucun projectile n'a été vu.
+- Vérification : cc 4029 frames, cb 1797 frames : 0 différente.
+
+### Jalon 11 (suite) : mesure de la zone de tir du type 6, bloquée par la cadence de tir
+- Traces `dumps/c2` (tir en impulsions 4 frames tenues / 4 relâchées de la frame 7000 à 9200, joueur identique côté MD : 0 frame différente) : 23 destructions de type 6 côté PCE.
+- Les écarts MD viennent du tir du joueur, pas de la boîte de collision : PCE tire à 7002, 7018, 7034, 7050, 7074, 7090, 7112 (intervalles 14 à 24 frames), la MD tire à d'autres frames avec les mêmes appuis. Balayage SHH6 = 0, 3, 5, 8, 11 : écarts 350, 347, 352, 355, 358, donc sans effet. SHH6 reste à 0 (macro `SHH6` dans enemy.c).
+- À faire d'abord : modéliser exactement l'acceptation d'un tir (appuis brefs répétés) avant de mesurer les zones de tir.
+
+## Correction du jalon 11 (suite) et jalon 12 : mi-boss (type 11) et ses projectiles (type 12)
+- **Correction** : la divergence de tir mesurée plus haut n'était pas un défaut de la cadence de tir. Le tir PCE de la frame 7000 était consommé par un objet de type 12 (projectile du mi-boss), que la MD ne connaissait pas. La cadence de tir est correcte.
+- **Type 11 (mi-boss)**, apparitions aux frames PCE 6691 et 14787 (deux fois, identiques), x = 112 : descend de y = -30 à 80 à 2 px/frame (k = 0..55), puis état 2 (k 56..128), 3 (129..206), 4 (207..238), 5 (239..334), état 6 : remonte à 2 px/frame et disparaît à y < -48 (k = 399). Demi-tailles 10x5. Il encaisse des tirs (16 mesurés : 3 pendant la descente + 12 + le dernier à la frame 7034) ; non touché par contact. Affichage : deux moitiés (gauche normale, droite retournée), images 16x16 pour k < 171 et k >= 295, 16x32 entre (image haute « arrêt » pour k 207..246).
+- **Type 12 (projectiles)**, demi-tailles 1x1 : 12 « convergents » (indices 0..11, un toutes les 6 frames à partir de k = 63, partent des bords, 80 frames de vol, intouchables, état 1) puis 12 tirés du boss (indices 16..27, un toutes les 8 frames à partir de k = 247, de (112, 88), vitesse $24 aux angles de la table, sortie de l'écran, vulnérables au tir, état 2). Table `stage1_bul12` (position 8.8 et vitesse relevées sur la partie cc).
+- **Emplacements** : l'objet explosion de l'original garde son emplacement 31 frames (la MD le fait maintenant, état `on == 4`) ; un projectile créé dans un emplacement déjà traité dans la frame par le boss n'apparaît qu'à la frame suivante (état `on == 3`). Pool de sprites 16x16 porté à 16 (18 fait planter la ROM : limite de 80 sprites).
+- **Vérification** : cc 798 frames (type 11) et 614 (type 12), cb 399 et 306 : 0 différente ; types 3, 4, 5, 6, 7, 8 inchangés sur cc et cb.
+- **Non résolu** : timing exact des destructions par tir. Sur c2 (tir en rafales à partir de 7000) : type 12 1 frame différente, mais types 6, 8 et 5 divergent par cascade ; sur c3 (joueur sous le boss, `dumps/c3`) le boss meurt 1 frame trop tard côté MD (un tir est absorbé par un projectile qui n'est pas touché côté PCE). Essai « test de collision avec la position du tir de la frame précédente » : type 5 passe de 25 à 3 frames différentes sur ch mais le type 8 se dégrade (les demi-hauteurs de tir de chaque type ont été calées sans ce décalage). À refaire proprement avec un jeu de traces de tir par type.
+- Points de score du mi-boss et des projectiles : non mesurés (ENEMY_SCORE par défaut sauf contact : aucun point). Effet des tirs chargés sur le boss : non mesuré (1 dégât par frame de contact).
+
+# Jalon 13 — écran titre, flux titre → jeu → game over, ennemis de type 9 et 10
+
+## Écran titre
+- Image = dernière image de l'intro PCE (frame 1740 de `dumps/boot`, recadrée sur 224 lignes à partir de la ligne 15), réduite à 4 palettes de 15 couleurs (`tools/mdpal.py`, 2,2 % de pixels modifiés), ressource `title_image` (non compressée : le décodage « BEST » de 896 tuiles prenait ~2 s au démarrage).
+- « PUSH START BUTTON » clignotant : ajout MD (l'original n'affiche pas de texte sur cette image). START lance le stage 1 ; plus de vie → retour au titre.
+- L'intro Konami / défilement animé de la PCE n'est pas portée (image fixe).
+- Corrections liées : l'écran reste noir pendant le chargement du stage (palette de fond posée à la fin de `STAGE_init`), un `SYS_doVBlankProcess()` après `STAGE_init()` vide la file DMA (sans lui, un redémarrage affichait un décor vide pendant ~100 frames), `SPR_initEx(640)` (VRAM sprites ; tuiles utilisateur 16..743 < 800, marge de 57 tuiles).
+- `tools/mdtest_stage.py` appuie sur START à la frame 300 (le jeu démarre au titre).
+
+## Types 9 et 10 (banque $0C, table de gestionnaires à $16C26)
+- Table des gestionnaires : type 9 → `$65FE`, type 10 → `$652D`, types 13/14 → `$4EE0`, 15 → `$4F2E` (objets au sol, voir ci-dessous).
+- **Type 9 (soucoupes grises)** : 16 apparitions (2 séries de 8, toutes les 21 frames, côtés alternés), x = 24 ou 216, y = −8, vx = ±256, vy = $120 avec ay = −3 : x atteint 120 quand vy atteint 0 (96 frames) ; arrêt 96 frames ; puis cran d'angle toutes les 17 frames (vitesse $1C, sens selon le côté) jusqu'à (y & $FF) ≥ $D0 ; elle fonce alors sur le joueur (visée `$4030`, vitesse $40). Image 15/16/17/18 aux frames 0/56/68/80 puis figée sur 18. Collision 5×5. Modèle `tools/enemy910_sim.py` = RAM PCE sur 16 objets.
+- **Type 10 (petits vaisseaux en formation)** : 12 apparitions (2 séries de 6, x = 56 + 24·n puis 136 + 24·n, y = 224, vy = −256) ; montent 192 frames, puis ay = 8 et ax = ±18 (signe : octet x − $78 négatif → +18) pendant l'ouverture des ailes (images 19→23 aux compteurs 13, 26, 38, 51), ax s'inverse quand vy = 0, fin quand vy atteint 512 (puis redescendent) ; les objets de rang impair (après la décision) descendent en plus de 1/3 px par frame (`$427F`). Collision 9×5. Images 21 à 23 = deux demi-sprites 16×16 symétriques (composés en un 32×16 côté MD).
+- Vérification ROM = PCE : cc 1098 frames (type 9) et 463 (type 10), 0 différence ; tous les autres types inchangés (cc, cb : 0 ; ch, c2, c3 : mêmes écarts de timing de tir qu'avant).
+- Couleurs approchées par PAL2 (gris / rouge-bleu).
+
+## Constats pour la suite (stage 1 jusqu'à la fin)
+- Les objets de type 13/14 (rangée de 5 « cibles » au sol, y = 179 relatif au défilement, images 38/40) et 15 sont des ennemis au sol : non implémentés (la bombe, bouton I, n'existe pas encore côté MD).
+- Fin du stage : le défilement s'arrête à la frame PCE 18 300 et un boss géant (crabe rose, nombreux sprites, projectiles orange et anneaux bleus) occupe l'écran dans une arène sombre à piliers ; trace `dumps/ce/ce.trace` (frames 17 500 à 24 000), captures `dumps/ce/g*.rgba`. Non porté.
+
+# Jalon 14 — stage 1 jouable de bout en bout (boss de fin approximatif)
+- Flux : titre → stage 1 → boss de fin → « STAGE 1 CLEAR » (START) → titre ; plus de vie → titre.
+- **Boss de fin = APPROXIMATION non vérifiée** : le crabe est déjà dans le décor extrait (statique) ; un objet invisible (type interne 13) à (120, 50), boîte 44×22, 100 tirs, lance 3 tirs visés toutes les 50 frames (sprites des projectiles du mi-boss), actif dès la frame de jeu 15 160 (PCE 18 040), +10 000 points à la mort. L'original (trace `dumps/ce/ce.trace`) : crabe animé qui se déplace (y 15–105, x 108–124, mouvement dépendant du joueur), anneaux bleus, projectiles orange, bras en sprites (patterns 288–370, palette 12), piliers = objets de type 2. Rien de cela n'est reproduit ; le crabe reste affiché après sa défaite.
+- Vérification : cc, types 3–12 inchangés (0 différence) ; seuls les projectiles du boss approximatif diffèrent (type 12 après la frame 18 090).
+- Harnais : le champ `bossDead` ajouté à `EnemyState` décale le tableau des types (offset +4 dans `mdtest_stage.py`).
+- Toujours absents : bombe (bouton I), ennemis au sol (types 13/14/15, rangées de cibles), cloches de couleur / bonus (vitesse, etc.), tirs ennemis hors boss, son, intro Konami, stages 2+.
+
+## Jalon 15 — ennemis au sol (types 13/14/15) et bombe
+
+**Bombe (bouton I PCE → C sur Mega Drive ; A reste l'invincibilité de débogage, haut+bas = vitesse x4)**, décodée sur la trace `dumps/bb4` :
+- 2 emplacements (objets 38 et 43 sur PCE), alternés ; une pression = une bombe dans le premier emplacement libre.
+- Viseur automatique : ennemi au sol (y entre 70 et 150, |dx| < 32 du joueur) non déjà visé, sinon (x joueur, y 111). La bombe part à y joueur − 5, x visé −12 (emplacement 38) ou +12 (emplacement 43).
+- Vol : immobile 8 frames, puis −2,5 px/frame ; elle explose quand elle atteint le y de la cible ; l'ennemi touché devient une explosion 4 frames plus tard, +100 points.
+- Vérifié sur bb4 : trajectoire de la bombe à ±1 frame, destruction des ennemis au sol à ±1 frame de la frame PCE.
+- Non fait : l'objet (type 29) que l'ennemi laisse en mourant, l'explosion propre aux ennemis au sol (blanche/fumée sur PCE ; on réutilise l'explosion aérienne).
+
+**Ennemis au sol** (17 apparitions relevées sur `dumps/cc`, `stage1_ground[]`) :
+- Types 13/14 ($4EE0) : suivent le défilement du sol (delta de scroll de la frame), fermés 240 frames (120 pour l'indicateur 1 au premier cycle), ouverts 10 frames. Ne se détruisent qu'à la bombe, tirs normaux sans effet.
+- Type 15 ($4F2E) : marcheur, 96 frames d'arrêt / 128 frames de marche (vx ±0,125, vy 0,125), image 344/345 alternée (10 / 192 frames).
+- Vérifié contre `dumps/cc` : types 14 : 15 frames différentes sur 3963 (un décalage d'1 px d'une frame tous les 256 frames) ; type 15 : 13 sur 3133.
+- Non fait : leurs tirs (le marcheur tire un projectile visé à chaque cycle ; les types 13/14 ne tirent qu'à partir du rang 6, donc pas ici).
+
+**Technique** : 6 emplacements dédiés aux ennemis au sol (`MAX_ENEMIES` 24, `MAX_AIR` 18) ; limite de 80 objets sprite du moteur SGDK atteinte → une seule feuille `spr_exm` par explosion (au lieu de deux objets), `sEnemy` passe à 22 ; SPR_initEx(696).
+
+## Jalon 16 : boss de fin visuel
+- `tools/mkboss.py` (appelé par mkassets) : 11 motifs du crabe (VRAM PCE b18100) → `res/boss_l.png`/`boss_s.png`, quantifiés sur la ligne de palette BG 0 (état final des événements de palette) ; `src/boss_data.h` : 21 poses (≤12 pièces) + pose/ancre par frame depuis la trace `dumps/ce` (joueur immobile).
+- enemy.c : à la frame de jeu 14620, libère sEn10/sEn4/nuages (VRAM) et crée 12+4 sprites ; position = ancre + dx/dy. Capture `md/shots/bt/all.png` vs `pce.png` : disposition concordante.
+- Reste approximatif : HP/tirs/mouvement dépendant du joueur, explosion de mort.
+
+## Jalon 17 : dynamique du boss
+- Relevé sur `dumps/ce` (SAT) : tirs ennemis = motif 487 ; salves de 3 depuis le canon gauche (obj x 73) puis droit (167), à y_crabe+63, toutes les ~80 frames (première : PCE 18007 = frame de calcul 15127). Implémenté (visés, angle±2).
+- Boîte de collision du boss suit l'ancre du crabe (y = ay+32). PV : aucun octet de PV trouvé en RAM (balayage décrément/coïncidence avec les tirs) ; estimation = 500 tirs consommés avant la mort (trace `bs` : mort en PCE 24780, 554 tirs disparus). À affiner.
+- Mort : sprites du crabe masqués, `STAGE_eraseBoss` remplace le décor du crabe par `res/boss_clear.png` (bande vide + piliers extraite sous le crabe), explosions aléatoires ~130 frames (PCE : 24780→24910), puis fin de niveau. Trajectoire en boucle au-delà de 6500 frames.
+
+## Jalon 18 : tirs ennemis génériques
+- Objets 48..65 type 1 (routine $444C) : 72 événements de tir uniques extraits de toutes les traces (`tools/ext_ebul.py` → `extract/ebul.pkl`) ; frame et position du tireur identiques d'une partie à l'autre. Vitesse 319/256, 32 directions, angle = visée + (0..3) − 1. Côté MD : le tir part si un ennemi vivant est à la position relevée (±3 px) et si le joueur n'est pas à moins de 0x30×0x28 (routine $4507).
+- Boss : tirs relevés séparément (jalon 17).
+
+## Jalon 19 — stage 2 jouable (décor, scroll, nuages, ennemis rejoués, tirs)
+- Chaîne : `tools/build_all.sh` (mkassets, mkstage2, mkenemies2, compilation).
+- Ennemis du stage 2 : trajectoires rejouées depuis le relevé PCE (idle-run, 321 instances, 223 gabarits, 145 images), HP=1, pas de poursuite ; tirs génériques rejoués (64 événements).
+- Bug corrigé : réserve de VRAM sprites trop petite (560) -> NULL sur SPR_addSprite -> corruption de la liste. Le décor du stage 2 s'arrête à la tuile 786 ; réserve portée à 640.
+- Reste : boss stage 2 (vaisseau, scroll figé à 37666), cloches/objets du stage 2, score, stage 3+, son.
+
+## Jalon 20 — tables du stage 2 compactées + trace complète du jeu
+- Tables d'ennemis : paires (dx,dy) dédoublonnées (1 octet/pas) + images en run-length ; contrôle d'aller-retour dans mkenemies2.py. Code 506 -> 338 Ko.
+- Boss du stage 2 : le vaisseau est dessiné en fond (BG) par un script d'une dizaine de milliers de frames (états 1 à 12 de l'objet 72, 37600 -> 47754) ; non reproduit. Le scroll s'arrête à $0FFC.
+- Trace complète : `dumps/s3.script` -> `dumps/s3/` (trace s3t depuis 47960, dump toutes les 40 frames jusqu'à 110000). Elle traverse les stages 3 à 6 (boss jaune en stage 3 vers 77000, boss violet en stage 4 vers 131000...).
+
+## Jalon 21 — stage 3 jouable (îles flottantes), chaîne paramétrée par stage
+- Chaîne générique : `tools/ext_inst.py` (instances d'ennemis), `ext_ebul_n.py` (tirs), `ext_clouds.py` (nuages), `stitch2.py` (fond recollé à partir du scroll RAM de la trace), `mdpal_dyn.py`, `mkstageN.py`, `mkenemiesN.py`, `build_all.sh`.
+- Traces : `dumps/s3/` (partie avec tir, dumps toutes les 40 frames jusqu'à 110000), `dumps/s3i/` (sans tir, trace 47000 -> 73000). Stage 3 = frames PCE 48142 -> 72662 ; scroll 4992 px fini à 63226 ; stage 4 dès 72662 (6299 px), stage 5 dès 92066 (4179 px), stage 6 dès 105095.
+- Ennemis : tables communes `e2types.h`, données par stage (`E2Data`), pools de sprites plafonnés (14/8/4/3) car la VRAM sprites est à la limite.
+- Boss du stage 3 (soleil jaune, 63226 -> 72259) : non fait. Les objets 104-107 (types 4/5) sont une chaîne de pièces qui saute d'une frame à l'autre ; la chronologie est la même avec ou sans tir (le boss ne dépend pas du joueur). Le stage se termine provisoirement 300 frames après la fin du défilement.
+- TEST_SKIP (stage.c) : saute à 50 frames de la fin du défilement, pour tester les enchaînements.

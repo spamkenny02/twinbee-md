@@ -1,0 +1,6 @@
+*.pce
+*.bin
+dumps/
+emu/
+out/
+__pycache__/
