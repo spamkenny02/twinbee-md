@@ -1,9 +1,13 @@
 300 keys 08
-310 keys 02
-820 shot h820
-1100 keys 08
-1110 keys 00
-1200 shot h900
-1500 shot h3700
-2500 shot h3900
-2500 end
+310 keys 32
+400 shot h400
+500 shot h500
+700 shot h700
+900 shot h900
+1100 shot h1100
+1400 shot h1400
+1800 shot h1800
+2400 shot h2400
+3200 shot h3200
+4000 shot h4000
+4000 end

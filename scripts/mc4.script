@@ -1,0 +1,9 @@
+300 keys 08
+310 keys 00
+690 ramtrace r4
+700 keys 01
+701 keys 00
+780 shot s780
+840 shot s840
+1000 ramtraceoff
+1001 end

@@ -1,0 +1,71 @@
+banque slot  octets_exécutés  octets_code_total
+  00    7      4882    6075
+  01    6      2755    5006
+  02    2      2335    2519
+  0B    2      3596    4041
+  0C    3      4223    4371
+  14    6       414     463
+  15    6      1912    2202
+  17    5      2479    5121
+
+total code: 29798 octets (22596 exécutés)
+banques vues sur plusieurs slots: {}
+
+résolution inter-banques observée (banque source, slot) -> banque cible:
+  00 slot 2 -> {'02': 2, '0B': 1}
+  00 slot 5 -> {'17': 4}
+  00 slot 6 -> {'01': 10, '14': 2, '15': 1}
+  00 slot 7 -> {'00': 205}
+  01 slot 6 -> {'01': 38}
+  01 slot 7 -> {'00': 24}
+  02 slot 2 -> {'02': 63}
+  0B slot 2 -> {'0B': 71}
+  0B slot 3 -> {'0C': 1}
+  0B slot 7 -> {'00': 16}
+  0C slot 2 -> {'0B': 50}
+  0C slot 3 -> {'0C': 48}
+  0C slot 7 -> {'00': 19}
+  14 slot 6 -> {'14': 4}
+  14 slot 7 -> {'00': 13}
+  15 slot 6 -> {'15': 33}
+  15 slot 7 -> {'00': 49}
+  17 slot 5 -> {'17': 55}
+  17 slot 7 -> {'00': 13}
+
+sauts indirects (tables de saut à traiter à la main): 3
+  L00_E7B8  JMP ($20D7)
+  L02_41F4  JMP ($2054)
+  L0B_4594  JMP ($2011)
+
+appels non résolus (banque cible inconnue): 31
+  depuis banque 00 vers $4065 (x1)
+  depuis banque 00 vers $4AB2 (x1)
+  depuis banque 00 vers $4AEE (x1)
+  depuis banque 00 vers $4E82 (x1)
+  depuis banque 00 vers $C000 (x2)
+  depuis banque 00 vers $C327 (x1)
+  depuis banque 00 vers $C4F3 (x1)
+  depuis banque 00 vers $C62A (x1)
+  depuis banque 00 vers $C7EB (x1)
+  depuis banque 00 vers $C7FE (x1)
+  depuis banque 00 vers $C882 (x1)
+  depuis banque 00 vers $CA78 (x1)
+  depuis banque 00 vers $D0C7 (x1)
+  depuis banque 00 vers $D118 (x1)
+  depuis banque 00 vers $D1E7 (x2)
+  depuis banque 00 vers $D225 (x1)
+  depuis banque 00 vers $D22E (x1)
+  depuis banque 00 vers $D281 (x2)
+  depuis banque 00 vers $D28D (x2)
+  depuis banque 00 vers $D3CE (x1)
+  depuis banque 00 vers $D67E (x2)
+  depuis banque 00 vers $D74A (x2)
+  depuis banque 00 vers $D9C5 (x1)
+  depuis banque 01 vers $B122 (x1)
+  depuis banque 01 vers $B197 (x1)
+  depuis banque 01 vers $B220 (x1)
+  depuis banque 0B vers $9A21 (x1)
+  depuis banque 0B vers $A842 (x1)
+  depuis banque 0B vers $B9ED (x1)
+  depuis banque 0B vers $C12D (x1)
+  depuis banque 0C vers $8B32 (x1)
