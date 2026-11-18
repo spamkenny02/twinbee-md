@@ -32,6 +32,7 @@ TILESET stage4_tileset "stage4.png" BEST ALL
 MAP stage4_map "stage4.png" stage4_tileset BEST 0
 TILESET stage5_tileset "stage5.png" BEST ALL
 MAP stage5_map "stage5.png" stage5_tileset BEST 0
+TILESET boss2_tileset "boss2.png" NONE NONE
 TILESET stage6_tileset "stage6.png" BEST ALL
 MAP stage6_map "stage6.png" stage6_tileset BEST 0
 SPRITE spr_e2_0 "e2_0.png" 2 2 NONE 0

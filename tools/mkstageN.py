@@ -13,6 +13,7 @@ packed = [int(d[i]) | (int(d[i + 1]) << 4) for i in range(0, len(d), 2)]
 ev = [l.split() for l in open('extract/stage%d_md_events.txt' % N)]
 backdrop = ev[0][1]; ev = [(int(a) + 2, int(b), c) for a, b, c in ev[1:]]       # +2 lignes de tiles : 16 px ajoutés en haut de l'image
 clouds = json.load(open('extract/clouds_stage%d.json' % N))
+if N == 2: clouds = [c for c in clouds if c[0] < 37400]       # fenêtre du boss : objets de type 1 qui ne sont pas des nuages (fumées, boulets)
 P = 'stage%d' % N; U = 'STAGE%d' % N
 with open(SRC + P + '_data.h', 'w') as f:
     f.write('// Généré par tools/mkstageN.py : %s (fond res/%s.png, défilement, palettes glissantes, nuages)\n#ifndef %s_DATA_H\n#define %s_DATA_H\n' % (P, P, U, U))

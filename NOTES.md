@@ -387,3 +387,12 @@ Dans l'original, un ennemi qui touche un bras est détruit sans tuer le joueur ;
 - E2_MAX_PIECES 8 → 12 (un ennemi du stage 6 a 11 pièces). Avertissement connu : un delta pièce hors s8 dans stage6_enemies.h (une pièce mal placée).
 - Les ennemis au sol du stage 5 (cristaux/plateformes) ne sont pas rejoués (pool sol = 0).
 - Jeu jouable des stages 1 à 6 ; fin de chaque stage 2–6 provisoire (scrollFrames+300), pas de boss.
+
+## Jalon 24 — Boss du stage 2 (galion) rejoué
+- Le galion est un décor BG (BAT 64x64 de la PCE) : 637 tuiles distinctes, ≈50 couleurs → partition statique 2×15 couleurs (`tools/mkboss2pal.py`, erreur faible, 145 tuiles légèrement dégradées).
+- Capture fine : `dumps/s2b.script` (dump toutes les 8 frames, 37600→47800) ; `tools/mkboss2.py atlas` (dictionnaire de tuiles), `tools/mkboss2data.py` (BAT initial + diffs par keyframe + scroll X/Y par frame → `src/boss2_data.h`).
+- Scroll : octets RAM $3DB6 (X−8) et $3DBA (Y−3, signé) ; le bit 8 est retrouvé par continuité (vérifié sur 238 ancres/dumps, seul écart en toute fin quand l'écran est vide).
+- MD (`src/boss2.c`) : tileset chargé à TILE_USER_INDEX, copie du BAT, lignes entrantes écrites dans le plan B (anneau 32 lignes), diffs appliqués à chaque keyframe, HScroll/VScroll par frame. Début à la frame PCE 37 400 (ciel vide), fin 47 760 → « STAGE 2 CLEAR ».
+- Ennemis du stage 2 re-extraits sur toute la durée (types 2,3,4,16–28 : pirates, boulets…). Les objets de type 1 des emplacements 90–95 dans la fenêtre du boss ne sont pas des nuages (fumées) : supprimés de la liste des nuages.
+- Bug corrigé : rescomp supprime les images vides en fin de feuille de sprites → `pc->img >= numFrame` faisait planter updateFrame ; garde ajoutée dans e2Draw (valable pour tous les stages).
+- Non fait : le galion ne peut pas être détruit (séquence fixe, comme observé en run sans dégâts), pas d'explosion finale.

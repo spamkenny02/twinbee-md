@@ -9,6 +9,7 @@
 #include "stage4_data.h"
 #include "stage5_data.h"
 #include "stage6_data.h"
+#include "boss2.h"
 
 StageState stage;
 u8 stageNo = 1;                         // 1 ou 2 : stage en cours (choisi avant STAGE_init)
@@ -19,6 +20,7 @@ static u16 palEvN, mapH, scrollFrames, cloudN;
 static const u8* scrollTab;
 static const CloudSpawn* cloudTab;
 static u16 backdropCol;
+static bool boss2On;
 
 static Map* bg;
 static u16 palEventPos;
@@ -169,7 +171,7 @@ void STAGE_init(void)
     stageClearTimer = 0;
     memset(&stage, 0, sizeof(stage));
 #ifdef TEST_SKIP
-    stage.frame = scrollFrames - 50;
+    stage.frame = (stageNo == 2) ? (BOSS2_START) : (scrollFrames - 50);
 #endif
     memset(popOn, 0, sizeof(popOn));
     nextCloud = 0;
@@ -177,7 +179,7 @@ void STAGE_init(void)
     shownLives = START_LIVES;
     memset(prevShot, 0, sizeof(prevShot)); memset(prevCharged, 0, sizeof(prevCharged));
     impTimer[0] = impTimer[1] = 0;
-    palEventPos = 0;
+    palEventPos = 0; boss2On = FALSE;
     applyPaletteEvents((camY() >> 3) - 2);
     MAP_scrollToEx(bg, 0, camY(), TRUE);
     hudDrawScore();
@@ -353,7 +355,9 @@ void STAGE_update(void)
     prevShot[0][0] = player.shotActive; prevShot[0][1] = player.shotX; prevShot[0][2] = player.shotY;
     prevShot[1][0] = player.shot2Active; prevShot[1][1] = player.shot2X; prevShot[1][2] = player.shot2Y;
     prevCharged[0] = player.chargedLevel; prevCharged[1] = player.chargedX; prevCharged[2] = player.chargedY;
-    if ((stageNo >= 2) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
+    if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On) { BOSS2_start(); boss2On = TRUE; }
+    if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
+    else if ((stageNo >= 3) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
     stage.frame++;
 }
 
@@ -417,10 +421,11 @@ bells:
         hudTile(hud_digit_tiles[(shownLives > 0) ? shownLives : 0], 7, PLAYFIELD_H / 8);
     }
     if (player.charge != shownCharge) hudDrawGauge();
-    MAP_scrollTo(bg, 0, camY());
+    if (boss2On) BOSS2_update(stage.frame - BOSS2_START); else MAP_scrollTo(bg, 0, camY());
 }
 
 void STAGE_afterVBlank(void)
 {
+    if (boss2On) return;
     applyPaletteEvents((camY() >> 3) - 2);
 }

@@ -74,6 +74,7 @@ res += ['TILESET stage2_tileset "stage2.png" BEST ALL', 'MAP stage2_map "stage2.
 res += ['TILESET stage3_tileset "stage3.png" BEST ALL', 'MAP stage3_map "stage3.png" stage3_tileset BEST 0']
 res += ['TILESET stage4_tileset "stage4.png" BEST ALL', 'MAP stage4_map "stage4.png" stage4_tileset BEST 0']
 res += ['TILESET stage5_tileset "stage5.png" BEST ALL', 'MAP stage5_map "stage5.png" stage5_tileset BEST 0']
+res += ['TILESET boss2_tileset "boss2.png" NONE NONE']
 res += ['TILESET stage6_tileset "stage6.png" BEST ALL', 'MAP stage6_map "stage6.png" stage6_tileset BEST 0']
 open(RES + 'resources.res', 'w').write('\n'.join(res) + '\n')
 

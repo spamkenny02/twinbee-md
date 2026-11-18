@@ -89,6 +89,7 @@ static void e2Draw(void)
             const E2Piece* pc = &fr->p[k];
             Sprite* sp;
             if (n[pc->cls] >= E2->pool[pc->cls]) continue;
+            if (pc->img >= E2->spr[pc->cls]->animations[0]->numFrame) continue;     // images vides en fin de feuille : supprimées par rescomp
             sp = sE2[pc->cls][n[pc->cls]++];
             SPR_setVisibility(sp, VISIBLE); SPR_setFrame(sp, pc->img); SPR_setHFlip(sp, pc->flip);
             SPR_setPosition(sp, enemies.x[i] + pc->dx + PF_XOFF, enemies.y[i] + pc->dy);
