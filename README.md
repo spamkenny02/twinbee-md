@@ -17,7 +17,7 @@ Ce README est le point d'entrée pour reprendre le projet. Le détail chronologi
 | Bonus | Bleue (vitesse +2), noire (vitesse −2), blanche (tir double), verte/violette (options : 3 mini-abeilles suiveuses, **sans collision**), rouge (flag posé, **aucun effet**) |
 | Autres bonus/objets | Non faits : tir en éventail ($08) et bouclier ($10) des objets au sol, vie supplémentaire, objet laissé par les ennemis au sol |
 | Score / points des cloches colorées | Score basique (500 par cloche) ; valeurs réelles non mesurées |
-| Son | Rien |
+| Son | Musique FM+PSG+PCM (titre, 6 stages, 3 boss, fin de stage) et 4 bruitages PCM (jalons 27-28) ; manquent perte de vie/game over, bonus, explosion joueur |
 | ROM | ~1,8 Mo ; VRAM et nombre de sprites très tendus (voir §6) |
 
 Dernière ROM : `md/twinbee/out/rom.bin` après `tools/build_all.sh` (non versionnée : `.gitignore` exclut `*.bin`, `*.pce`, `dumps/`, `emu/`, `out/`).
@@ -78,7 +78,7 @@ Dernière ROM : `md/twinbee/out/rom.bin` après `tools/build_all.sh` (non versio
 3. Boss des stages 3 (soleil jaune, ~63226→72259), 4 (violet, ~90633→), 5, 6 (rejeu par trace comme le boss 2) ; HP/destruction réelles des boss.
 4. Score complet / HUD, continues, écran de fin, progression complète depuis le titre (`START_STAGE` est à 1).
 5. Tirs ennemis des ennemis au sol, objet laissé par les ennemis au sol (type 29), explosions au sol.
-6. Son (pilote banque `$02`, PSG PCE → YM2612/PSG MD) : rien d'engagé.
+6. Son : jingles manquants (ids 0x11 perte de vie, 0x47/0x9D/0xA3 non identifiés), effets restants (voir NOTES j27-j28), mixage fin.
 7. Optimisation : taille ROM (1,8 Mo, limite SGDK/cart 4 Mo), VRAM, limite de 80 sprites.
 
 ## 9. Pièges connus

@@ -1,4 +1,5 @@
 #include "enemy.h"
+#include "mus.h"
 void STAGE_releaseClouds(void);
 void STAGE_eraseBoss(void);
 #include "player.h"
@@ -223,6 +224,7 @@ static s16 aim(s16 ex, s16 ey, s16 tx, s16 ty)
 
 static void kill(s16 i)
 {
+    SFX_play(SFX_BOOM);
     enemies.on[i] = 2;
     enemies.kills++;
     if (group[i] != NOGROUP) groupKills[group[i]]++;

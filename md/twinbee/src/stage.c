@@ -282,7 +282,7 @@ static void shotCollisions(s16* active, s16 sx, s16 sy, s16 n)
         // zone en losange : |dx| + dy <= 24 (mesuré : dx=0 touche à dy=23, pas à 25 ; dx=8 ne touche pas à dy=22)
         if ((dx >= -14) && (dx <= 14) && (dy >= -8) && ((abs(dx) + dy) <= 24))
         {
-            if (bellV[j] > BELL_V_NOHIT) { bellV[j] = BELL_V_HIT; bellCol[j] = bellRoll(); }     // la cloche repart vers le haut ; nouvelle couleur
+            if (bellV[j] > BELL_V_NOHIT) { bellV[j] = BELL_V_HIT; bellCol[j] = bellRoll(); SFX_play(SFX_BELLHIT); }     // la cloche repart vers le haut ; nouvelle couleur
             *active = FALSE;                        // le tir est consommé
             impTimer[n] = 2; impX[n] = sx; impY[n] = sy;
             break;
@@ -313,6 +313,7 @@ void STAGE_update(void)
         {
             stage.bellOn[i] = FALSE;
             stage.score += BELL_SCORE;
+            SFX_play(SFX_BELLGET);
             switch (bellCol[i])     // effets lus en $17:$AFE2 et suivants
             {
                 case 1: if (player.speedLvl < 0x12) player.speedLvl += 2; break;

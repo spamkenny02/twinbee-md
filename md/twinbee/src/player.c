@@ -1,4 +1,5 @@
 #include "player.h"
+#include "mus.h"
 #include "resources.h"
 
 PlayerState player;
@@ -137,6 +138,7 @@ static void updateShots(u16 joy, u16 frame)
     if (shotTimer && (--shotTimer == 0))
     {
         // position prise au moment de l'appui, pas à l'apparition
+        SFX_play(SFX_SHOT);
         if (shotPending == 1) { player.shotActive = TRUE; player.shotX = pendX; player.shotY = pendY; player.shotTw = (player.flags & PW_TWIN) ? 1 : 0; }
         else { player.shot2Active = TRUE; player.shot2X = pendX; player.shot2Y = pendY; player.shot2Tw = (player.flags & PW_TWIN) ? 1 : 0; }
         shotPending = 0;
