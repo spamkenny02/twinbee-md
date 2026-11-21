@@ -3,6 +3,7 @@
 #include "enemy.h"
 #include "mus.h"
 #include "resources.h"
+#include "boss_rock.h"
 #include "stage1_pal.h"
 #include "stage1_data.h"
 #include "stage2_data.h"
@@ -25,6 +26,10 @@ static bool boss2On;
 
 static Map* bg;
 static u16 palEventPos;
+static u16 rockInd;
+static s16 rockRow;                 // plus petite rangée monde déjà écrite
+static u8 rockOn;
+static void rockUpdate(s16 rockT);
 static u16 clearInd;                // première tuile VRAM libre (décor de remplacement après la mort du boss)
 static u16 hudBase;                 // première tuile VRAM des tuiles du HUD (chiffres, jauge)
 static u16 nextCloud;
@@ -123,7 +128,7 @@ void STAGE_init(void)
     u16 ind = TILE_USER_INDEX;
     s16 i;
 
-    VDP_clearPlane(BG_A, TRUE);
+    VDP_clearPlane(BG_A, TRUE); rockOn = 0; VDP_setVerticalScroll(BG_A, 0);
     PAL_setColors(0, palette_black, 64, CPU);
     VDP_setBackgroundColor(0);
 
@@ -398,7 +403,38 @@ void STAGE_update(void)
     if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
     else if ((stageNo >= 3) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
     MUS_stageUpdate(stage.frame);
+    rockUpdate(stage.frame - ROCK_START);
     stage.frame++;
+}
+
+// débris de roche des parois (stage 1, du début du défilement final au boss) : tuiles sur le plan A, défilement vertical identique à celui
+// des sprites PCE (32x64, un nouveau 128 px plus haut tous les 128 px). Anneau de 32 rangées : la rangée « monde » r est écrite à la rangée r & 31.
+static void rockWriteRow(s16 r)
+{
+    const s16 m = r & 31, t = r & 15;
+    s16 c;
+    for (c = 0; c < 4; c++)
+    {
+        VDP_setTileMapXY(BG_A, (t < 8 && r <= 7) ? TILE_ATTR_FULL(ROCK_PALETTE_LINE, FALSE, FALSE, FALSE, rockInd + t * 4 + c) : 0, 1 + c, m);
+        VDP_setTileMapXY(BG_A, (t < 8 && r <= 7) ? TILE_ATTR_FULL(ROCK_PALETTE_LINE, FALSE, FALSE, TRUE, rockInd + t * 4 + (3 - c)) : 0, 27 + c, m);
+    }
+}
+
+static void rockUpdate(s16 rockT)
+{
+    s16 y0, rtop;
+    if ((stageNo != 1) || (rockT < 0)) return;
+    if (!rockOn)
+    {
+        rockOn = 1; rockInd = TILE_SPRITE_INDEX - 32;
+        VDP_loadTileSet(&boss_rock_tiles, rockInd, DMA);
+        VDP_clearPlane(BG_A, TRUE);
+        rockRow = 8;                // à l'origine, y0 = -64 : le monde visible commence à la rangée 8 (vide)
+    }
+    y0 = rock_y[(rockT < ROCK_NUM) ? rockT : (ROCK_NUM - 1)];
+    rtop = (-y0 - 8) >> 3;          // rangée monde juste au-dessus du haut de l'écran
+    while (rockRow > rtop) { rockRow--; rockWriteRow(rockRow); }
+    VDP_setVerticalScroll(BG_A, (-y0) & 255);
 }
 
 // mort du boss : remplace le corps du crabe (décor) par un fond vide avec piliers (image extraite de la carte sous le crabe)

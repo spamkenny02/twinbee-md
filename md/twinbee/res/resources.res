@@ -25,6 +25,8 @@ SPRITE spr_cloud "spr_cloud.png" 4 4 NONE 0
 SPRITE spr_boss_l "boss_l.png" 4 4 NONE 0
 SPRITE spr_boss_s "boss_s.png" 4 2 NONE 0
 IMAGE boss_clear "boss_clear.png" BEST ALL
+TILESET boss_rock_tiles "boss_rock.png" NONE NONE
+SPRITE spr_ring "boss_ring.png" 4 4 NONE 0
 TILESET stage2_tileset "stage2.png" BEST ALL
 MAP stage2_map "stage2.png" stage2_tileset BEST 0
 TILESET stage3_tileset "stage3.png" BEST ALL

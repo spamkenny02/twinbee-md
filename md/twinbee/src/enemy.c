@@ -45,7 +45,7 @@ static s16 ax[MAX_ENEMIES], ay[MAX_ENEMIES], cnt[MAX_ENEMIES], svx[MAX_ENEMIES],
 // demi-tailles de collision relevées en RAM ($338E / $33FB) : type 5 : 4x5, type 3 : 5x5, type 4 : 2x11
 // demi-hauteur utilisée par les tirs (type 4 : 5 et non 11, mesuré sur les kills de la partie ch)
 static const s16 kindSHH[16] = {0, 0, 0, 0, 0, 5, SHH6, 0, SHH8, 0, 0, SHH11, SHH12, 0, 0, 0};
-static const s16 kindHW[16] = {0, 0, 0, 5, 2, 4, 5, 2, 4, 5, 9, 10, 0, 44, 0, 0}, kindHH[16] = {0, 0, 0, 5, 11, 5, 5, 5, 5, 5, 5, 5, 1, 22, 0, 0};
+static const s16 kindHW[17] = {0, 0, 0, 5, 2, 4, 5, 2, 4, 5, 9, 10, 0, 44, 0, 0, 4}, kindHH[17] = {0, 0, 0, 5, 11, 5, 5, 5, 5, 5, 5, 5, 1, 22, 0, 0, 4};
 #define HWK(k)  (((k) >= 32) ? (s16) E2->hw[(k) - 32] : kindHW[k])
 #define HHK(k)  (((k) >= 32) ? (s16) E2->hh[(k) - 32] : kindHH[k])
 #define SHHK(k) (((k) >= 32) ? (s16) E2->hh[(k) - 32] : kindSHH[k])
@@ -64,6 +64,7 @@ static Sprite *sEnemy[MAX_SPR16], *sEx[MAX_EX], *sEn10[MAX_SPR10];
 #define EX_TOTAL    (EX_SMALL + 24)
 
 #include "boss_data.h"
+#include "boss_fx.h"
 #include "stage2_enemies.h"
 #include "stage3_enemies.h"
 #include "stage4_enemies.h"
@@ -102,6 +103,8 @@ static void e2Draw(void)
 static Sprite *sBossL[BOSS_MAX_BIG], *sBossS[BOSS_MAX_SMALL];
 static u8 bossReady;      // 1 : sprites du crabe créés ; 2 : échec
 static s16 bossDeathT;    // 0 : vivant ; >0 : frames depuis la mort du boss (explosions, ~130 frames comme sur PCE)
+static Sprite *sRing[2];
+static s16 ringIdx, ringNextT;
 static s16 bossT;         // frames écoulées depuis le début du boss (frame de calcul - BOSS_START_FRAME)
 
 static void bossStart(void)
@@ -124,6 +127,11 @@ static void bossStart(void)
         SPR_setDepth(sBossS[i], 5); SPR_setVisibility(sBossS[i], HIDDEN);
     }
     if (bossReady == 2) VDP_drawText("NULLBOSS", 0, 1);
+    for (i = 0; i < 2; i++)
+    {
+        sRing[i] = SPR_addSprite(&spr_ring, 0, -64, TILE_ATTR(RING_PALETTE_LINE, FALSE, FALSE, FALSE));
+        if (sRing[i]) { SPR_setDepth(sRing[i], 4); SPR_setVisibility(sRing[i], HIDDEN); }
+    }
 }
 
 static void bossDraw(void)
@@ -150,7 +158,8 @@ static void bossDraw(void)
 
 void ENEMY_init(void)
 {
-    bossReady = 0; bossT = -1; bossDeathT = 0;
+    bossReady = 0; bossT = -1; bossDeathT = 0; ringIdx = 0; ringNextT = 0;
+    { s16 q; for (q = 0; q < 2; q++) sRing[q] = NULL; }
     s16 i;
     maxSpr16 = (stageNo == 1) ? MAX_SPR16 : 8;
     for (i = 0; i < maxSpr16; i++)
@@ -244,7 +253,7 @@ static void contact(s16 i, s16 f, s16 playerObjX, s16 playerObjY, u16* bonus)
             if (PLAYER_contact(adx >= 7 + hx, dx > 0) != CONTACT_NONE)
             {
                 if (KIND[i] == 12) kill(i);
-                else if (KIND[i] != 11) { kill(i); *bonus += ENEMY_SCORE; }
+                else if ((KIND[i] != 11) && (KIND[i] != 16)) { kill(i); *bonus += ENEMY_SCORE; }
             }
         }
     }
@@ -396,6 +405,18 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
 #endif
             continue;
         }
+        if (KIND[i] == 16)
+        {
+            // anneau bleu du boss : tir visé (32 directions) à 234/256 px/frame, indestructible, traverse l'écran
+            fx[i] += vx[i]; fy[i] += vy[i];
+            enemies.x[i] = fx[i] >> 8; enemies.y[i] = fy[i] >> 8;
+            arcFrames[i]++;
+            if ((enemies.y[i] >= 272) || (enemies.y[i] < -40) || (enemies.x[i] < -40) || (enemies.x[i] > 280) || bossDeathT) { enemies.on[i] = 0; continue; }
+#if !ENEMY_TEST_PRE
+            if (contactOn) contact(i, f, playerObjX, playerObjY, bonus);
+#endif
+            continue;
+        }
         if (KIND[i] == 12)
         {
             // projectile du mi-boss : ligne droite ; les 12 premiers (angle[i] < 12) disparaissent après 80 frames
@@ -488,6 +509,22 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             const s16 by = boss_ay[bt] + 32;
             arcFrames[i]++;
             enemies.y[i] = by;
+            // anneau bleu : instants relevés sur la trace PCE (≈ toutes les 421 frames), départ au centre du crabe, visé sur le joueur
+            if (!bossDeathT && ((ringIdx < RING_NUM) ? (f == ring_t[ringIdx]) : ((ringIdx >= RING_NUM) && (f == ringNextT))))
+            {
+                s16 j;
+                if (ringIdx < RING_NUM) ringIdx++;
+                ringNextT = f + 421;
+                for (j = 0; j < MAX_AIR; j++) if (!enemies.on[j]) break;
+                if (j < MAX_AIR)
+                {
+                    const s16 ox = 119, oy = boss_ay[bt] + 43;
+                    const s16 a = aim(ox, oy, playerObjX, playerObjY) & 31;
+                    enemies.on[j] = 3; state[j] = 2; KIND[j] = 16; arcFrames[j] = 0; group[j] = NOGROUP; angle[j] = 99;
+                    vx[j] = (ebul_vel[a][0] * 234) / 319; vy[j] = (ebul_vel[a][1] * 234) / 319;
+                    fx[j] = ox * 256; fy[j] = oy * 256; enemies.x[j] = ox; enemies.y[j] = oy;
+                }
+            }
             if ((bossT >= 507) && (((bossT - 507) % 80) == 0))
             {
                 const s16 ox = (((bossT - 507) / 80) & 1) ? 167 : 73, oy = boss_ay[bt] + 63;
@@ -976,7 +1013,7 @@ s16 ENEMY_hitByCharged(s16 cx, s16 cy, s16 hw, s16 hh)
 
 void ENEMY_draw(void)
 {
-    s16 i, c4 = 0, c16 = 0, c10 = 0;
+    s16 i, c4 = 0, c16 = 0, c10 = 0, nRing = 0;
     if ((bossReady == 1) && !bossDeathT) bossDraw();
     else if ((bossReady == 1) || (bossReady == 3)) { for (i = 0; i < BOSS_MAX_BIG; i++) SPR_setVisibility(sBossL[i], HIDDEN); for (i = 0; i < BOSS_MAX_SMALL; i++) SPR_setVisibility(sBossS[i], HIDDEN); }
     for (i = 0; i < MAX_ENEMIES; i++)
@@ -985,6 +1022,19 @@ void ENEMY_draw(void)
         if ((!enemies.on[i]) || (enemies.on[i] >= 3)) continue;
         if ((k == 6) && (flags[i] & 2)) continue;         // clignotement
         if (k == 13) continue;                              // boss : dans le décor
+        if (k == 16)
+        {
+            // anneau : 8 frames par image (282, 284, 286 puis 304, 296, 308 en boucle)
+            static const u8 ringSeq[3] = {4, 3, 5};
+            const s16 a = arcFrames[i], fr = (a < 24) ? (a >> 3) : ringSeq[((a - 24) >> 3) % 3];
+            if ((nRing < 2) && sRing[nRing])
+            {
+                SPR_setVisibility(sRing[nRing], VISIBLE); SPR_setFrame(sRing[nRing], fr);
+                SPR_setPosition(sRing[nRing], enemies.x[i] - 16 + PF_XOFF, enemies.y[i] - 16);
+                nRing++;
+            }
+            continue;
+        }
         if (k >= 32) continue;                              // stage 2 : dessiné par e2Draw
         if ((k == 14) || (k == 15))
         {
@@ -1064,6 +1114,7 @@ void ENEMY_draw(void)
         }
     }
     for (i = c16; i < maxSpr16; i++) SPR_setVisibility(sEnemy[i], HIDDEN);
+    for (i = nRing; i < 2; i++) if (sRing[i]) SPR_setVisibility(sRing[i], HIDDEN);
     if (stageNo >= 2) e2Draw();
     if (!bossReady && (stageNo == 1))
     {

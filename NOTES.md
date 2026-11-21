@@ -423,3 +423,9 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Rendu de chaque effet 01..40 (hex) en isolation (`dumps/sfx/run.sh` : `snd FF` puis `snd <id>`, `pcm`) → `tools/mksfx.py <ids>` : mono 13,3 kHz, recadré, +6 dB, WAV → `res/sfx.res` (`WAV sfx_XX "…" XGM2 13300`).
 - Appels (`SFX_play`, canaux PCM 2 et 3 d'XGM2, le canal 1 reste à la batterie du morceau) : tir joueur (17), ennemi détruit (1B, dans `kill()`), cloche touchée (1A), cloche ramassée (19), bonus (28 : défini, pas encore appelé).
 - Journal des requêtes en jeu (stage 1, 3400-9000, `dumps/sl2/sndlog.txt`) : 17 ×511, 1B ×98, 1A ×23, 19 ×5, 28 ×1 (frame 5088), 1D ×1, 21 ×1 : 19 suit la collecte d'une cloche colorée dans la frame suivante (ex. frame 4437 → 4438).
+
+## Jalon 29 — boss du stage 1 (anneaux + rochers)
+- Anneaux bleus (sprites, palette HUD) : lancés aux frames PCE relevées, visée 32 directions, indestructibles.
+- Rochers des murs : tuiles plan A + scroll vertical (`rockUpdate`, stage.c), trajectoire `rock_y[]` extraite des traces.
+- Les tuiles de rocher sont placées à `TILE_SPRITE_INDEX - 32` (sous la zone sprites) : l'ancien emplacement écrasait la VRAM sprites.
+- Reste : bonus (cloche rouge, objets sol), boss 3–6, intro.

@@ -27,7 +27,9 @@
 #define DEATH_FALL_MIN  52          // la chute (3 px/frame) dure au moins 52 frames et jusqu'à y >= 246
 #define RESPAWN_Y       255         // réapparition en (64, 255), montée de 2 px/frame pendant 48 frames
 #define RESPAWN_INV     192
+#ifndef START_LIVES
 #define START_LIVES     3
+#endif
 #define ARM_BLINK_FRAMES 32         // un bras touché clignote 32 frames (4 visibles, 4 cachés) puis reste perdu
 #define ARM_BLINK_PHASE  4          // décalage de phase du clignotement par rapport au compteur de frames
 
