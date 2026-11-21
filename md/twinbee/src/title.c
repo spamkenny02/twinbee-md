@@ -1,6 +1,7 @@
 // Écran titre : image de la PC Engine (dernière image de l'intro), « PUSH START » clignotant (ajout MD)
 #include <genesis.h>
 #include "title.h"
+#include "mus.h"
 #include "title_pal.h"
 #include "resources.h"
 
@@ -16,6 +17,7 @@ void TITLE_run(void)
     VDP_setTextPlane(BG_A); VDP_setTextPalette(PAL0);
     SYS_doVBlankProcess();
     PAL_setColors(0, title_pal, 64, CPU);
+    MUS_play(MUS_TITLE);
     while (TRUE)
     {
         const u16 joy = JOY_readJoypad(JOY_1);

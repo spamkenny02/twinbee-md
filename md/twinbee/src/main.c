@@ -5,6 +5,7 @@
 #include "player.h"
 #include "stage.h"
 #include "title.h"
+#include "mus.h"
 
 u16 gameFrame;                            // compteur de frames de jeu (lu par les tests)
 
@@ -30,6 +31,7 @@ int main(bool hard)
     VDP_setScreenWidth256();
     VDP_setPlaneSize(64, 32, TRUE);
     SPR_initEx(696);
+    MUS_init();
     TITLE_run();
     stageNo = START_STAGE;
     start();
@@ -39,6 +41,9 @@ int main(bool hard)
         const u16 joy = JOY_readJoypad(JOY_1);
         s16 n = ((joy & (BUTTON_UP | BUTTON_DOWN)) == (BUTTON_UP | BUTTON_DOWN)) ? 4 : 1;        // débogage : haut + bas = vitesse x4
 
+#ifdef DBG_GAMEOVER_AT
+        if (gameFrame == DBG_GAMEOVER_AT) player.gameOver = TRUE;
+#endif
         if (player.gameOver)                // plus de vie : retour à l'écran titre
         {
             SPR_reset();
@@ -51,6 +56,7 @@ int main(bool hard)
         else if ((joy & ~prevJoy & BUTTON_START) && (stageClearTimer == 0)) start();
         else if (stageClearTimer > 0)
         {
+            if (stageClearTimer == 1) MUS_play(MUS_CLEAR);
             if (stageClearTimer < 1000) stageClearTimer++;
             if (stageClearTimer == 150)
             {

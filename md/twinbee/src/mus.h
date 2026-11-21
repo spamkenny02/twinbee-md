@@ -1,0 +1,14 @@
+// Musique : pilote XGM2 (Z80) ; pistes issues du PSG de la PC Engine (tools/mkmusic.py) : FM + PSG + PCM
+#ifndef MUS_H
+#define MUS_H
+#include <genesis.h>
+
+enum { MUS_TITLE = 0, MUS_STAGE1, MUS_STAGE2, MUS_STAGE3, MUS_STAGE4, MUS_STAGE5, MUS_STAGE6,
+       MUS_BOSS_A, MUS_BOSS_B, MUS_BOSS_6, MUS_CLEAR, MUS_COUNT };
+
+void MUS_init(void);
+void MUS_play(u16 track);
+void MUS_stop(void);
+void MUS_stageUpdate(s16 frame);        // appelée chaque frame de stage : lance la musique du stage puis celle du boss
+
+#endif

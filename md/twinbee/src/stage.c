@@ -1,6 +1,7 @@
 #include "stage.h"
 #include "player.h"
 #include "enemy.h"
+#include "mus.h"
 #include "resources.h"
 #include "stage1_pal.h"
 #include "stage1_data.h"
@@ -118,6 +119,7 @@ static void hudDrawGauge(void)
 // ---------------------------------------------------------------- init
 void STAGE_init(void)
 {
+    MUS_stop();
     u16 ind = TILE_USER_INDEX;
     s16 i;
 
@@ -394,6 +396,7 @@ void STAGE_update(void)
     if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On) { BOSS2_start(); boss2On = TRUE; }
     if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
     else if ((stageNo >= 3) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
+    MUS_stageUpdate(stage.frame);
     stage.frame++;
 }
 
