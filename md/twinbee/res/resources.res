@@ -51,6 +51,7 @@ SPRITE spr_b6_32x32 "boss6_32x32.png" 4 4 NONE 0
 SPRITE spr_b6_32x64 "boss6_32x64.png" 4 8 NONE 0
 SPRITE spr_bar_big "spr_bar_big.png" 4 4 NONE 0
 SPRITE spr_bar_small "spr_bar_small.png" 2 2 NONE 0
+SPRITE spr_item "spr_item.png" 2 2 NONE 0
 TILESET stage2_tileset "stage2.png" BEST ALL
 MAP stage2_map "stage2.png" stage2_tileset BEST 0
 TILESET stage3_tileset "stage3.png" BEST ALL

@@ -23,6 +23,8 @@ static s16 spawnedG, scrollHist[4];
 // bombes (bouton I de l'original) : 2 emplacements (voies gauche / droite), viseur automatique sur l'ennemi au sol le plus proche
 static s16 bombHitX[NUM_BOMBS], bombHitY[NUM_BOMBS], bombOn[NUM_BOMBS], bombX[NUM_BOMBS], bombT[NUM_BOMBS], bombTarget[NUM_BOMBS], bombLandY[NUM_BOMBS], bombKillIn[NUM_BOMBS];
 static s32 bombFy[NUM_BOMBS];
+static s16 itemOn, itemX, itemY0, itemT, groundKills;   // bonus vie (voir itemDrop)
+static Sprite* sItem;
 static const u8 gwalkTab[5] = {0x60, 0, 0x80, 1, 0};     // marcheurs (type 15) : $4FD0 = durée, marche
 static s16 spawnedE;     // indice dans la table des tirs ennemis génériques
 static s16 spawned, spawnedM, spawnedP, spawnedS, spawned6, spawnedB, spawned12, spawned9, spawned10, bossSpawned;
@@ -219,6 +221,7 @@ void ENEMY_init(void)
     enemies.bossDead = 0;
     spawned = spawnedM = spawnedP = spawnedS = spawned6 = spawnedB = spawned12 = spawned9 = spawned10 = bossSpawned = spawnedG = spawnedE = 0;
     memset(bombOn, 0, sizeof(bombOn));
+    itemOn = 0; groundKills = 0; sItem = NULL;
     spawn2 = spawnB2 = 0; e2Off = FALSE; bnOn = FALSE; bnDone = FALSE;
     if (stageNo >= 2)       // les tables du stage 1 ne servent pas : tout est considéré comme déjà apparu
     {
@@ -272,6 +275,31 @@ static void contact(s16 i, s16 f, s16 playerObjX, s16 playerObjY, u16* bonus)
 }
 
 
+// bonus « vie » laissé par un ennemi au sol détruit à la bombe (type 29 de l'original, sous-type 4, ROM $AEF4) :
+// chute de 1/3 px par frame, ramassé au contact (+1 vie, SFX), disparaît sous l'écran. Chute/ramassage mesurés sur bb4 ;
+// règle de tirage (ici 1 ennemi au sol sur 4) et icône NON récupérées.
+static void itemDrop(s16 x, s16 y)
+{
+    if (itemOn || (((groundKills++) & 3) != 0)) return;
+    itemOn = 1; itemX = x; itemY0 = y; itemT = 0;
+}
+static void itemUpdate(s16 px, s16 py)
+{
+    if (!itemOn) { if (sItem) { SPR_releaseSprite(sItem); sItem = NULL; } return; }
+    itemT++;
+    {
+        const s16 y = itemY0 + itemT / 3;
+        s16 dx = px - itemX, dy = py - y;
+        if (dx < 0) dx = -dx;
+        if (dy < 0) dy = -dy;
+        if ((dx < 12) && (dy < 12)) { if (player.lives < 99) player.lives++; SFX_play(SFX_POWER); itemOn = 0; }
+        else if (y > 230) itemOn = 0;
+        if (!itemOn) { if (sItem) { SPR_releaseSprite(sItem); sItem = NULL; } return; }
+        if (!sItem) sItem = SPR_addSpriteSafe(&spr_item, 0, -64, TILE_ATTR(PAL3, FALSE, FALSE, FALSE));
+        if (sItem) SPR_setPosition(sItem, itemX - 8 + PF_XOFF, y - 8);
+    }
+}
+
 // bouton bombe : une bombe par voie libre (38 = gauche, 43 = droite) ; point de visée = ennemi au sol le plus proche non déjà visé
 // (|dx| < 32 du joueur, vu entre y = 70 et 150), sinon (x du joueur, y = 111) ; la bombe part de y du joueur, x visée -+ 12
 void ENEMY_bombPress(s16 px, s16 py)
@@ -312,7 +340,7 @@ static void bombsUpdate(u16* bonus)
                     if ((enemies.on[i] != 1) || ((KIND[i] != 14) && (KIND[i] != 15))) continue;
                     if (dx < 0) dx = -dx;
                     if (dy < 0) dy = -dy;
-                    if ((dx < 12) && (dy < 12)) { kill(i); *bonus += ENEMY_SCORE; }
+                    if ((dx < 12) && (dy < 12)) { itemDrop(enemies.x[i], enemies.y[i]); kill(i); *bonus += ENEMY_SCORE; }
                 }
                 bombOn[b] = 0;
             }
@@ -367,6 +395,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     s16 i;
 
     *bonus = 0;
+    itemUpdate(playerObjX, playerObjY);
     if (contactOn && bnOn && BOSSN_contact(playerObjX, playerObjY)) PLAYER_contact(FALSE, FALSE);
     scrollHist[3] = scrollHist[2]; scrollHist[2] = scrollHist[1]; scrollHist[1] = scrollHist[0]; scrollHist[0] = scrollDelta;
     for (i = 0; i < MAX_EX; i++)

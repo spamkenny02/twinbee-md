@@ -432,3 +432,9 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 
 ## Jalon 32 — Intro
 - `src/intro.c` : 5 scènes (logo Konami noir puis blanc, ciel, crépuscule, étoiles) = captures PCE `dumps/boot/f0180/0420/0660/0780/1020` recadrées (ligne 15, 224 lignes), quantifiées 16 couleurs ; fondus ; START abrège ; enchaîne sur le titre. Images fixes : pas d'animation des abeilles ni de l'enseigne qui descend (à faire en sprites).
+
+## Jalon 33 — Objets laissés par les ennemis au sol
+- Trace `dumps/bb4` : seule trace avec des objets de type 29 (emplacements 96/97, créés à la position de l'ennemi tué à la bombe ; chute de 1/3 px par frame ; l'objet 96 disparaît au contact du joueur, le 97 tombe hors écran). Sprites PCE : motifs 416 (palette 2) et 417 (palette 3) mais leur VRAM n'a pas été capturée.
+- ROM (banque $17, routine ramassage `$AE44`, sous-type en `$3468,Y`) : 0 = SFX $22 seul ; 1 = efface les objets ($AE77) ; 2 = `$3438 |= $08` + SFX $28 (tir en éventail, `$AEDC`) ; 3 = `$A0 |= $10` (bouclier, `$AF07`) ; 4 = vie +1 BCD max 99 + SFX $23 (`$AEF4`, exécuté dans bb4, donc l'objet 96 = vie). La règle de tirage du sous-type (`$3468` jamais écrit directement) n'est pas identifiée.
+- MD : `itemDrop/itemUpdate` (enemy.c) : un ennemi au sol sur 4 tué à la bombe laisse une vie (icône `spr_item`, dessin MD `tools/mkitem.py`), ramassage |dx|,|dy| < 12 (estimé). Vérifié à l'émulateur : vies 3 → 4.
+- Non fait : tir en éventail (sous-type 2), bouclier (3), effacement (1), et leur tirage.

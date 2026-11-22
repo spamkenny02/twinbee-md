@@ -89,6 +89,8 @@ import glob
 for _f in sorted(glob.glob('extract/boss[0-9].res')): res += [l for l in open(_f).read().split('\n') if l.strip()]
 import mkbarrier
 res += mkbarrier.build(RES, SRC)
+import mkitem
+res += mkitem.build(RES)
 res += ['TILESET stage2_tileset "stage2.png" BEST ALL', 'MAP stage2_map "stage2.png" stage2_tileset BEST 0']
 res += ['TILESET stage3_tileset "stage3.png" BEST ALL', 'MAP stage3_map "stage3.png" stage3_tileset BEST 0']
 res += ['TILESET stage4_tileset "stage4.png" BEST ALL', 'MAP stage4_map "stage4.png" stage4_tileset BEST 0']
