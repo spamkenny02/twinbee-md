@@ -26,6 +26,7 @@ static s32 bombFy[NUM_BOMBS];
 EnemyPlayer enemyPlayer[2];
 u16 enemyBonus2;
 static s16 curBombOwner;           // joueur dont la bombe vient d'exploser / joueur en contact
+static s16 itemCool;
 static s16 itemOn[2], itemX[2], itemY0[2], itemT[2], itemKind[2], groundKills;   // fruits (voir itemDrop)
 static Sprite* sItem[2];
 static const u8 gwalkTab[5] = {0x60, 0, 0x80, 1, 0};     // marcheurs (type 15) : $4FD0 = durée, marche
@@ -224,7 +225,7 @@ void ENEMY_init(void)
     enemies.bossDead = 0;
     spawned = spawnedM = spawnedP = spawnedS = spawned6 = spawnedB = spawned12 = spawned9 = spawned10 = bossSpawned = spawnedG = spawnedE = 0;
     memset(bombOn, 0, sizeof(bombOn));
-    memset(itemOn, 0, sizeof(itemOn)); memset(sItem, 0, sizeof(sItem)); groundKills = 0;
+    memset(itemOn, 0, sizeof(itemOn)); memset(sItem, 0, sizeof(sItem)); groundKills = 0; itemCool = 0;
     spawn2 = spawnB2 = 0; e2Off = FALSE; bnOn = FALSE; bnDone = FALSE;
     if (stageNo >= 2)       // les tables du stage 1 ne servent pas : tout est considéré comme déjà apparu
     {
@@ -309,8 +310,32 @@ static void itemDrop(s16 x, s16 y)
     for (k = 0; k < 2; k++) if (!itemOn[k]) break;
     if (k == 2) return;
     itemOn[k] = 1; itemX[k] = x; itemY0[k] = y; itemT[k] = 0; itemKind[k] = (groundKills++) & 1;
+    // règle relevée en bank 0B $7994 : compteur $9A (7 après un objet spécial), puis rnd & 15 : 0 ventilateur (si personne n'en a), 1 bouclier, 2 éclair
+    if (itemCool) itemCool--;
+    else
+    {
+        const s16 r = random() & 15;
+        if ((r == 0) && !((players[0].flags | (players[1].active ? players[1].flags : 0)) & PW_FAN)) { itemKind[k] = 2; itemCool = 7; }
+        else if ((r == 1) && !(players[0].shield || players[1].shield)) { itemKind[k] = 3; itemCool = 7; }
+        else if (r == 2) { itemKind[k] = 4; itemCool = 7; }
+    }
 }
-static void itemUpdate(void)
+static void itemPickup(s16 kind, s16 pn, u16* bonus)
+{
+    PlayerState* pl = &players[pn];
+    s16 i;
+    if (kind == 2) { pl->flags = (pl->flags & ~PW_TWIN) | PW_FAN; SFX_play(SFX_POWER); }
+    else if (kind == 3) { pl->shield = 900; SFX_play(SFX_POWER); }
+    else if (kind == 4)         // éclair : détruit tous les ennemis à l'écran
+    {
+        SFX_play(SFX_POWER);
+        for (i = 0; i < MAX_ENEMIES; i++)
+            if ((enemies.on[i] == 1) && (enemies.y[i] > 0) && (enemies.y[i] < 224) && (KIND[i] < 32))
+            { kill(i); if (pn) enemyBonus2 += ENEMY_SCORE; else *bonus += ENEMY_SCORE; }
+    }
+    else SFX_play(SFX_BELLGET);
+}
+static void itemUpdate(u16* bonus)
 {
     s16 k, pn;
     for (k = 0; k < 2; k++)
@@ -327,7 +352,7 @@ static void itemUpdate(void)
                 dx = enemyPlayer[pn].x - itemX[k]; dy = enemyPlayer[pn].y - y;
                 if (dx < 0) dx = -dx;
                 if (dy < 0) dy = -dy;
-                if ((dx < 12) && (dy < 12)) { SFX_play(SFX_BELLGET); itemOn[k] = 0; break; }
+                if ((dx < 12) && (dy < 12)) { itemPickup(itemKind[k], pn, bonus); itemOn[k] = 0; break; }
             }
             if (itemOn[k] && (y > 166)) itemOn[k] = 0;
         }
@@ -434,7 +459,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     *bonus = 0;
     {   // 2 joueurs : les ennemis visent le joueur en vie le plus proche (règle d'origine non vérifiée)
         s16 pn;
-        itemUpdate();
+        itemUpdate(bonus);
         if (contactOn && bnOn)
             for (pn = 0; pn < 2; pn++)
                 if (enemyPlayer[pn].on && BOSSN_contact(enemyPlayer[pn].x, enemyPlayer[pn].y)) { playerCur = pn; PLAYER_contact(FALSE, FALSE); }

@@ -43,6 +43,7 @@
 #define PW_OPT1    0x01     // option 1 (cloche verte)
 #define PW_OPT2    0x02     // option 2 (cloche violette)
 #define PW_TWIN    0x04     // tir double (cloche blanche)
+#define PW_FAN     0x08     // ventilateur : tir en éventail (3 directions)
 #define PW_BARRIER 0x80     // cloche rouge
 #define PLAYER_SPEED_LVL0 4
 
@@ -69,6 +70,8 @@ typedef struct
     s16 shotTw, shot2Tw;    // le tir en vol est un tir double (sprite et boîte de collision plus larges)
     s16 active;             // joueur présent dans la partie (le joueur 2 n'y entre qu'avec RUN / START de la manette 2)
     s16 armHidden;          // bras non dessinés cette frame (bit 0 gauche, bit 1 droit) : sert à la vérification
+    s16 sideOn[2], sideX[2], sideY[2], sideDx[2];   // tirs latéraux du ventilateur
+    s16 shield;             // bouclier ($A0 bit 4) : frames restantes
 } PlayerState;
 
 extern PlayerState players[2];
@@ -76,6 +79,7 @@ extern PlayerState players[2];
 extern s16 playerCur;            // joueur visé par PLAYER_contact / PLAYER_kill
 
 void PLAYER_init(void);
+void PLAYER_continue(s16 n);               // reprise après Continue : 2 vies, retour par le bas
 void PLAYER_join(void);                    // entrée du joueur 2
 void PLAYER_collide(void);                 // les deux vaisseaux se repoussent (à appeler après les PLAYER_update)
 void PLAYER_update(s16 n, u16 joy, u16 frame);   // logique d'une frame du joueur n

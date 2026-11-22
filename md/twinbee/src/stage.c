@@ -405,6 +405,12 @@ void STAGE_update(void)
             if (!pl->active) continue;
             if (prevShot[pn][0][0]) shotVsEnemies(pn, &pl->shotActive, prevShot[pn][0][1], prevShot[pn][0][2], 0);
             if (prevShot[pn][1][0]) shotVsEnemies(pn, &pl->shot2Active, prevShot[pn][1][1], prevShot[pn][1][2], 1);
+            {
+                s16 k;
+                enemyShotHW = 8; enemyShotHH = 16;
+                for (k = 0; k < 2; k++)
+                    if (pl->sideOn[k] && ENEMY_hitByShot(pl->sideX[k], pl->sideY[k])) { pl->sideOn[k] = FALSE; addScore(pn, ENEMY_SCORE); }
+            }
             if (prevCharged[pn][0] == 1) addScore(pn, ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[pn][1], prevCharged[pn][2] + 16, 15, 20));
             else if (prevCharged[pn][0] == 2) addScore(pn, ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[pn][1], prevCharged[pn][2] + 48, 27, 52));
         }

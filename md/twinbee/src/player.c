@@ -20,7 +20,7 @@ typedef struct
     s16 barKind;                    // 0 aucune, 1 grande, 2 petite : les sprites de barrière n'existent que tant qu'elle dure (VRAM sprites très serrée)
     s16 trailX[TRAIL_N], trailY[TRAIL_N];     // historique de la position du joueur (une entrée par frame)
     bool trailOn;
-    Sprite *sBody, *sArmL, *sArmR, *sShot, *sShot2, *sHalo;
+    Sprite *sBody, *sArmL, *sArmR, *sShot, *sShot2, *sHalo, *sSide0, *sSide1;
     s16 phaseTimer, deathX, deathY;
     Sprite *sDead0, *sDead;         // explosion du vaisseau
     Sprite *sC1L, *sC1R, *sC2L, *sC2M, *sC2R, *sC2T;
@@ -52,6 +52,8 @@ static void createSprites(void)
     V.sHalo = add(&spr_halo, PAL2, 0);
     V.sShot = add(&spr_shot, PAL3, 3);
     V.sShot2 = add(&spr_shot, PAL3, 3);
+    V.sSide0 = add(&spr_shot, PAL3, 3);
+    V.sSide1 = add(&spr_shot, PAL3, 3);
     V.sC1L = add(&spr_c1, PAL2, 3);
     V.sC1R = add(&spr_c1, PAL2, 3);
     V.sC2L = add(&spr_c2s, PAL2, 3);
@@ -161,8 +163,21 @@ static void updateShots(u16 joy, u16 frame)
         P.shot2Y -= SHOT_SPEED;
         if (P.shot2Y < -8) P.shot2Active = FALSE;
     }
+    {
+        s16 k;
+        for (k = 0; k < 2; k++) if (P.sideOn[k])
+        {
+            P.sideX[k] += P.sideDx[k]; P.sideY[k] -= 6;
+            if ((P.sideY[k] < -8) || (P.sideX[k] < -8) || (P.sideX[k] > 264)) P.sideOn[k] = FALSE;
+        }
+    }
     if (V.shotTimer && (--V.shotTimer == 0))
     {
+        if (P.flags & PW_FAN)
+        {
+            s16 k;
+            for (k = 0; k < 2; k++) { P.sideOn[k] = TRUE; P.sideX[k] = V.pendX; P.sideY[k] = V.pendY; P.sideDx[k] = k ? 4 : -4; }
+        }
         // position prise au moment de l'appui, pas à l'apparition
         SFX_play(SFX_SHOT);
         if (V.shotPending == 1) { P.shotActive = TRUE; P.shotX = V.pendX; P.shotY = V.pendY; P.shotTw = (P.flags & PW_TWIN) ? 1 : 0; }
@@ -223,6 +238,10 @@ static void drawShots(u16 frame)
 
     SPR_setVisibility(V.sShot, P.shotActive ? VISIBLE : HIDDEN);
     if (P.shotActive) { SPR_setFrame(V.sShot, P.shotTw); place(V.sShot, P.shotX, P.shotY); }
+    SPR_setVisibility(V.sSide0, P.sideOn[0] ? VISIBLE : HIDDEN);
+    if (P.sideOn[0]) { SPR_setFrame(V.sSide0, 0); place(V.sSide0, P.sideX[0], P.sideY[0]); }
+    SPR_setVisibility(V.sSide1, P.sideOn[1] ? VISIBLE : HIDDEN);
+    if (P.sideOn[1]) { SPR_setFrame(V.sSide1, 0); place(V.sSide1, P.sideX[1], P.sideY[1]); }
     SPR_setVisibility(V.sShot2, P.shot2Active ? VISIBLE : HIDDEN);
     if (P.shot2Active) { SPR_setFrame(V.sShot2, P.shot2Tw); place(V.sShot2, P.shot2X, P.shot2Y); }
 
@@ -271,6 +290,7 @@ static void drawShots(u16 frame)
 s16 PLAYER_contact(bool armZone, bool enemyLeft)
 {
     if (P.phase || P.inv) return CONTACT_NONE;
+    if (P.shield > 0) return CONTACT_ARM;      // bouclier : ignore les contacts
     if (P.barrier > 0)         // la barrière absorbe le coup (10 coups, boîte réduite à partir de 4)
     {
         if (--P.barrier == 0) P.flags &= ~PW_BARRIER;
@@ -304,16 +324,30 @@ s16 PLAYER_contact(bool armZone, bool enemyLeft)
 
 void PLAYER_kill(void)
 {
-    if (P.phase || P.inv) return;
+    if (P.phase || P.inv || (P.shield > 0)) return;
     P.phase = 1;
     V.phaseTimer = 0;
     V.deathX = P.x; V.deathY = P.y;
-    P.charge = 0;
+    P.charge = 0; P.sideOn[0] = P.sideOn[1] = FALSE; P.shield = 0;
+    SFX_play(SFX_DEATH1); SFX_play(SFX_BOOM);
+}
+
+void PLAYER_continue(s16 n)
+{
+    playerCur = n;
+    P.lives = START_LIVES2; P.gameOver = FALSE; P.phase = 2; V.phaseTimer = 0;
+    P.armLost = 0; P.armBlink = 0; P.armTimer = 0; P.flags = 0; P.barrier = 0; P.shield = 0;
+    P.speedLvl = PLAYER_SPEED_LVL0; V.trailOn = FALSE;
+    P.x = n ? PLAYER_START_X2 : PLAYER_START_X; P.y = RESPAWN_Y;
+    V.fx = (s32) P.x << 8; V.fy = (s32) P.y << 8;
+    P.inv = RESPAWN_INV;
+    playerCur = 0;
 }
 
 void PLAYER_update(s16 n, u16 joy, u16 frame)
 {
     playerCur = n;
+    if (P.shield > 0) P.shield--;
     lastFrame = frame;
     if (P.phase == 3) { updateShots(0, frame); return; }        // plus de vie, l'autre joueur continue
     if (P.armTimer && (--P.armTimer == 0)) P.armBlink = 0;
@@ -321,6 +355,7 @@ void PLAYER_update(s16 n, u16 joy, u16 frame)
     {
         // touché : explosion sur place, puis le vaisseau tombe
         V.phaseTimer++;
+        if (V.phaseTimer == DEATH_EXPLODE + 1) SFX_play(SFX_FALL);
         if (V.phaseTimer > DEATH_EXPLODE)
         {
             // la chute ne démarre vraiment que 2 frames plus tard
@@ -333,6 +368,7 @@ void PLAYER_update(s16 n, u16 joy, u16 frame)
                 P.speedLvl = PLAYER_SPEED_LVL0; P.flags = 0; P.barrier = 0; V.trailOn = FALSE;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
                 P.x = playerCur ? PLAYER_START_X2 : PLAYER_START_X; P.y = RESPAWN_Y;
                 P.inv = RESPAWN_INV;
+                SFX_play(SFX_RESP1); SFX_play(SFX_RESP2);
             }
         }
         updateShots(0, frame);
@@ -417,8 +453,8 @@ void PLAYER_draw(s16 n)
         }
     }
     {   // barrière : deux quarts de dôme en diagonale, une diagonale sur deux (scintillement de 1 frame comme sur PCE)
-        const bool on = (P.barrier > 0) && (P.phase == 0);
-        const s16 want = (P.barrier <= 0) ? 0 : ((P.barrier >= 4) ? 1 : 2);
+        const bool on = ((P.barrier > 0) || (P.shield > 0)) && (P.phase == 0);
+        const s16 want = (P.shield > 0) ? 1 : ((P.barrier <= 0) ? 0 : ((P.barrier >= 4) ? 1 : 2));
         const s16 d = (want == 1) ? 32 : 16;
         const bool alt = lastFrame & 1;
         s16 i;
