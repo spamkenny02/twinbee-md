@@ -8,23 +8,62 @@
 #define NSTAR  22
 #define SKY_FRAMES 520
 
-static bool logo(const Image *img, u16 frames, bool fadeIn)
+// logo Konami (original) : une ligne bleue descend et dessine le contour, le contour se remplit de couleurs,
+// puis le fond passe du noir au blanc par paliers. Timings relevés sur dumps/kon (PCE, images 20-260).
+static void logoRows(const Image *img, u16 from, u16 to)
 {
-    u16 prev = JOY_readJoypad(JOY_1);
-    VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE);
-    PAL_setColors(0, palette_black, 64, CPU);
-    VDP_drawImageEx(BG_B, img, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, FALSE, TRUE);
-    SYS_doVBlankProcess();
-    if (fadeIn) PAL_fadeIn(0, 15, img->palette->data, 20, FALSE);
-    else PAL_setPalette(PAL0, img->palette->data, CPU);
-    for (u16 f = 0; f < frames; f++)
+    u16 r;
+    for (r = from; r < to; r++)
+        VDP_setTileMapEx(BG_B, img->tilemap, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, r, 0, r, 32, 1, CPU);
+}
+
+static bool wait(u16 n, u16 *prev)
+{
+    while (n--)
     {
         const u16 joy = JOY_readJoypad(JOY_1);
-        if ((joy & BUTTON_START) && !(prev & BUTTON_START)) return TRUE;
-        prev = joy;
+        if ((joy & BUTTON_START) && !(*prev & BUTTON_START)) return TRUE;
+        *prev = joy;
         SYS_doVBlankProcess();
     }
     return FALSE;
+}
+
+static bool logo(void)
+{
+    static const u32 lineTile[8] = { 0, 0, 0x11111111, 0x11111111, 0x11111111, 0, 0, 0 };
+    u16 prev = JOY_readJoypad(JOY_1), y, shown = 0, i;
+    VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE);
+    PAL_setColors(0, palette_black, 64, CPU);
+    VDP_loadTileSet(intro_kout.tileset, TILE_USER_INDEX, DMA);
+    VDP_loadTileData(lineTile, TILE_USER_INDEX + intro_kout.tileset->numTile, 1, DMA);
+    PAL_setPalette(PAL0, intro_kout.palette->data, CPU);
+    PAL_setColor(16 + 1, 0x0E64);                                   // ligne de balayage : bleu clair (PAL1 indice 1)
+    for (i = 0; i < 32; i++) VDP_setTileMapXY(BG_A, TILE_ATTR_FULL(PAL1, FALSE, FALSE, FALSE, TILE_USER_INDEX + intro_kout.tileset->numTile), i, 0);
+    VDP_setVerticalScroll(BG_A, 0);
+    if (wait(20, &prev)) return TRUE;
+    for (y = 0; y < 224; y += 2)                                    // balayage : ~2 px par image
+    {
+        const u16 rows = (y >> 3) + 1;
+        if (rows > shown) { logoRows(&intro_kout, shown, rows > 28 ? 28 : rows); shown = rows; }
+        VDP_setVerticalScroll(BG_A, -(s16) y);
+        if (wait(1, &prev)) return TRUE;
+    }
+    VDP_clearPlane(BG_A, TRUE); VDP_setVerticalScroll(BG_A, 0);
+    if (wait(30, &prev)) return TRUE;
+    // remplissage couleur : même position, palette en fondu depuis le noir
+    VDP_loadTileSet(intro_kcol.tileset, TILE_USER_INDEX, DMA);
+    logoRows(&intro_kcol, 0, 28);
+    PAL_setColors(0, palette_black, 16, CPU);
+    PAL_fadeIn(0, 15, intro_kcol.palette->data, 16, FALSE);
+    if (wait(12, &prev)) return TRUE;
+    // fond noir -> blanc par paliers (indice 0 de la palette)
+    for (i = 1; i <= 7; i++)
+    {
+        PAL_setColor(0, i * 0x222);
+        if (wait(5, &prev)) return TRUE;
+    }
+    return wait(70, &prev);
 }
 
 static u16 mix(u16 a, u16 b, u16 t, u16 n)       // mélange de deux couleurs MD (0000BBB0GGG0RRR0) à t/n
@@ -115,8 +154,7 @@ void INTRO_run(void)
 {
     VDP_setWindowVPos(FALSE, 0);
     VDP_setHorizontalScroll(BG_B, 0); VDP_setVerticalScroll(BG_B, 0);
-    if (logo(&intro_k1, 70, TRUE)) goto out;
-    if (logo(&intro_k2, 110, FALSE)) goto out;
+    if (logo()) goto out;
     sky();
 out:
     VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE);

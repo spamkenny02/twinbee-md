@@ -3,8 +3,8 @@ MAP stage1_map "stage1.png" stage1_tileset BEST 0
 IMAGE hud_image "hud.png" NONE ALL
 TILESET hud_tiles "hud_tiles.png" NONE NONE
 IMAGE title_image "title.png" NONE ALL
-IMAGE intro_k1 "intro_k1.png" NONE ALL
-IMAGE intro_k2 "intro_k2.png" NONE ALL
+IMAGE intro_kout "intro_kout.png" NONE ALL
+IMAGE intro_kcol "intro_kcol.png" NONE ALL
 SPRITE intro_cloud "intro_cloud.png" 8 4 NONE 0
 SPRITE intro_bee "intro_bee.png" 4 4 NONE 0
 SPRITE intro_star "intro_star.png" 1 1 NONE 0
