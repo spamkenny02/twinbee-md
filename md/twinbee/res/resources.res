@@ -3,6 +3,11 @@ MAP stage1_map "stage1.png" stage1_tileset BEST 0
 IMAGE hud_image "hud.png" NONE ALL
 TILESET hud_tiles "hud_tiles.png" NONE NONE
 IMAGE title_image "title.png" NONE ALL
+IMAGE intro_k1 "intro_k1.png" NONE ALL
+IMAGE intro_k2 "intro_k2.png" NONE ALL
+IMAGE intro_sky "intro_sky.png" NONE ALL
+IMAGE intro_dusk "intro_dusk.png" NONE ALL
+IMAGE intro_star "intro_star.png" NONE ALL
 SPRITE spr_body "spr_body.png" 2 2 NONE 0
 SPRITE spr_arm "spr_arm.png" 2 2 NONE 0
 SPRITE spr_bell "spr_bell.png" 2 2 NONE 0

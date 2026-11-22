@@ -429,3 +429,6 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Boss 3–6 : rejeu des sprites PCE (`src/bossn.c`), données delta par frame générées par `tools/mkbossN.py` (voir commandes dans `tools/build_all.sh`), `src/bossN_data.h`, `res/bossN_*.png`. Boss 6 en boucle. PV 400 (estimés), hitbox non mesurée.
 - Vérifié à l'émulateur : stages 3, 4, 5 (ver jaune, PAL2 sans vert clair) et 6 (boss final).
 - Reste : intro, objets au sol (ventilo/bouclier/vie), décalage cloche ±4 px, hitbox barrière, jingles mort/game over, stage 6 fin.
+
+## Jalon 32 — Intro
+- `src/intro.c` : 5 scènes (logo Konami noir puis blanc, ciel, crépuscule, étoiles) = captures PCE `dumps/boot/f0180/0420/0660/0780/1020` recadrées (ligne 15, 224 lignes), quantifiées 16 couleurs ; fondus ; START abrège ; enchaîne sur le titre. Images fixes : pas d'animation des abeilles ni de l'enseigne qui descend (à faire en sprites).

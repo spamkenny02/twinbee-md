@@ -5,6 +5,7 @@
 #include "player.h"
 #include "stage.h"
 #include "title.h"
+#include "intro.h"
 #include "mus.h"
 
 u16 gameFrame;                            // compteur de frames de jeu (lu par les tests)
@@ -32,6 +33,7 @@ int main(bool hard)
     VDP_setPlaneSize(64, 32, TRUE);
     SPR_initEx(696); SPR_disableVDPSpriteChecking();
     MUS_init();
+    INTRO_run();
     TITLE_run();
     stageNo = START_STAGE;
     start();
