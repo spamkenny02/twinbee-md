@@ -470,3 +470,7 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 
 ## Jalon 39 — WinBee en rouge
 - Pas de ligne de palette libre pour un vrai rose : le joueur 2 utilise des sprites `spr_body2/arm2/orb2` (générés par `tools/mkhud2.py`) dont les bleus sont remplacés par les rouges/bruns déjà présents dans PAL2 (indices 2→1, 3→7, 5/6→4, 9→8). Le cœur du HUD 2P est bien rose.
+
+## Jalon 41 — fin du stage 6 (recherche PCE, `dumps/end6.script`, captures `dumps/end6/v*`)
+- Rejeu autofire jusqu'à 150000 : le boss 6 (cerveau) meurt vers PCE ~126100. Suite relevée : fondu noir → panorama qui défile (île et arbre, puis château doré, puis ciel) avec cadre doré + portrait de la princesse et texte japonais (« ありがとう ツインビー… », 3 lignes qui changent) vers 126600–128500 ; ciel avec les 3 héros (rose, bleu, vert) qui volent, staff roll (PRODUCER K. KITAUE, PROGRAMER ASUTY.S IGA, SPECIAL THANKS…) ~129900–134000 ; étoiles ; mer + arc-en-ciel, 3 caractères jaunes, « © 1992 KONAMI / ALL RIGHTS RESERVED. » ~135000–140000 ; puis la partie recommence au stage 1 (score conservé, 3 vies).
+- Durée totale ≈ 15000 frames (~4 min). Pas encore porté (texte japonais, panorama haut, portrait, staff roll à reconstituer).
