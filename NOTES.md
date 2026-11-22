@@ -509,6 +509,6 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Bombes : la main de la voie (gauche si voie 0) passe au motif PCE 465 (main avec bombe), 2 px plus bas, pendant 8 images (`PLAYER_bombArm`, `spr_arm` à 2 images, `extract/sprites_armb.npy`). Vérifié sur trace PCE (bb/tb).
 - end.c : classes de sprites rejouées 8 → 12, `edep`/`esp` agrandis dans la zone partagée `bat`.
 
-## Jalon 49 — intro Konami recalée sur la PCE
-- Ligne d'étirement + éclat, balayage 2 px/image, logo couleur d'un coup (image 170), marches de blanc toutes les 4 images (211), maintien jusqu'à 490, fondu 490-526.
-- Reste : scintillement de palette 170-210 de la PCE non reproduit.
+## Jalon 49 — intro Konami identique à la PCE (écart 0 px mesuré, images 12-230)
+- tools/mkkonami.py : logo couleur = tuiles/BAT du BG PCE (4 palettes) + rejeu exact des palettes 170-249 (scintillement, marches blanches) ; trait de balayage (profils 3/5/7/8 lignes relevés, opaque dessous) ; éclat = sprite 48x24 par image (res/intro_spark.png).
+- Pacing en temps réel (vtimer) : images logo 12→490, fondu 490-526.
