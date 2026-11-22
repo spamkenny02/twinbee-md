@@ -95,7 +95,7 @@ static void sprUpdate(s32 f)
 #define F_END 136040
 
 typedef struct { const u32* tiles; const u16* const* maps; const s32* mapf; const u16* pal; u16 ntiles, steps, npal, nmaps; s32 step0; } Scene;
-static const u16* const mapsA[] = { end_a_map0, end_a_map1, end_a_map2, end_a_map3 };
+static const u16* const mapsA[] = { end_a_map0, end_a_map1, end_a_map2, end_a_map3, end_a_map4 };
 static const u16* const mapsB[] = { end_b_map0 };
 static const u16* const mapsC[] = { end_c_map0 };
 static const Scene scenes[3] = {
