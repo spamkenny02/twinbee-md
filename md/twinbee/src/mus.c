@@ -31,6 +31,12 @@ void SFX_play(u16 id)
         case SFX_FALL:    XGM2_playPCMEx(sfx_05, sizeof(sfx_05), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
         case SFX_RESP1:   XGM2_playPCMEx(sfx_31, sizeof(sfx_31), SOUND_PCM_CH2, 3, FALSE, FALSE); break;
         case SFX_RESP2:   XGM2_playPCMEx(sfx_08, sizeof(sfx_08), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
+        case SFX_BOMB:    XGM2_playPCMEx(sfx_18, sizeof(sfx_18), SOUND_PCM_CH2, 2, FALSE, FALSE); break;
+        case SFX_BIG:     XGM2_playPCMEx(sfx_1D, sizeof(sfx_1D), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
+        case SFX_BHIT:    XGM2_playPCMEx(sfx_1F, sizeof(sfx_1F), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case SFX_BHIT2:   XGM2_playPCMEx(sfx_35, sizeof(sfx_35), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case SFX_BDEAD:   XGM2_playPCMEx(sfx_34, sizeof(sfx_34), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
+        case SFX_BXPL:    XGM2_playPCMEx(sfx_40, sizeof(sfx_40), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
         case SFX_POWER:   XGM2_playPCMEx(sfx_28, sizeof(sfx_28), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
     }
 }

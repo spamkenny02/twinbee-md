@@ -2,6 +2,7 @@
 #include "bossn.h"
 #include "resources.h"
 #include "stage.h"
+#include "mus.h"
 #include "player.h"
 #include "boss3_data.h"
 #include "boss4_data.h"
@@ -124,7 +125,7 @@ bool BOSSN_update(s16 t)
 bool BOSSN_hit(s16 sx, s16 sy, s16 hw, s16 hh)
 {
     if (!active || (hp <= 0) || (bx1 <= bx0)) return FALSE;
-    if ((sx + hw > bx0 + 8) && (sx - hw < bx1 - 8) && (sy + hh > by0 + 8) && (sy - hh < by1 - 8)) { hp--; return TRUE; }
+    if ((sx + hw > bx0 + 8) && (sx - hw < bx1 - 8) && (sy + hh > by0 + 8) && (sy - hh < by1 - 8)) { hp--; SFX_play(((hp & 3) == 0) ? SFX_BHIT2 : SFX_BHIT); return TRUE; }
     return FALSE;
 }
 

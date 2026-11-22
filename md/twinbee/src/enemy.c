@@ -267,7 +267,7 @@ static s16 aim(s16 ex, s16 ey, s16 tx, s16 ty)
 
 static void kill(s16 i)
 {
-    SFX_play(SFX_BOOM);
+    SFX_play((KIND[i] == 11) ? SFX_BIG : SFX_BOOM);
     enemies.on[i] = 2;
     enemies.kills++;
     if (group[i] != NOGROUP) groupKills[group[i]]++;
@@ -395,6 +395,7 @@ void ENEMY_bombPress(s16 px, s16 py, s16 owner)
         if (dx < bestDx) { bestDx = dx; best = i; }
     }
     if (best >= 0) cx = enemies.x[best];
+    SFX_play(SFX_BOMB);
     bombOn[b] = 1; bombT[b] = 0; bombTarget[b] = best; bombLandY[b] = ly; bombKillIn[b] = 0;
     bombX[b] = cx + ((b & 1) ? 12 : -12);
     bombFy[b] = (s32) (py - 5) << 8;
@@ -454,6 +455,8 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     if (bossDeathT)
     {
         if ((bossDeathT == 1) && (stageNo == 1)) STAGE_eraseBoss();
+        if ((bossDeathT == 1) && (stageNo >= 3)) SFX_play(SFX_BDEAD);
+        if (!(bossDeathT & 7)) SFX_play(SFX_BXPL);       // PCE : 16 explosions, une toutes les 8 frames
         // mort du boss : le crabe disparaît d'un coup, explosions réparties sur son corps pendant ~130 frames, puis fin de niveau
         if (!(bossDeathT % 6))
         {

@@ -7,3 +7,9 @@ WAV sfx_05 "sfx/s5.wav" XGM2 13300
 WAV sfx_08 "sfx/s8.wav" XGM2 13300
 WAV sfx_2F "sfx/s47.wav" XGM2 13300
 WAV sfx_31 "sfx/s49.wav" XGM2 13300
+WAV sfx_18 "sfx/s24.wav" XGM2 13300
+WAV sfx_1D "sfx/s29.wav" XGM2 13300
+WAV sfx_1F "sfx/s31.wav" XGM2 13300
+WAV sfx_34 "sfx/s52.wav" XGM2 13300
+WAV sfx_35 "sfx/s53.wav" XGM2 13300
+WAV sfx_40 "sfx/s64.wav" XGM2 13300

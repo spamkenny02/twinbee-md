@@ -498,3 +498,7 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 
 ## Jalon 46 — choix 1 / 2 joueurs au titre
 - Menu « 1 PLAYER / 2 PLAYERS » (haut/bas, l'entrée choisie clignote ; START valide ; START de la manette 2 = 2 joueurs direct). `TITLE_run()` renvoie TRUE pour 2 joueurs ; main.c appelle PLAYER_join/STAGE_join dès la 3e frame du stage. START manette 2 en jeu fonctionne toujours.
+
+## Jalon 47 — bruitages supplémentaires
+- Requêtes sonores PCE relevées par `sndlog` (stage 1 + boss 1, partie stage 2, bombes) : 18 = bombe (à chaque pression), 1D = mi-boss détruit, 1F = boss touché (35 tous les 4 coups), 34 = mort du boss (stages 3+), 40 = explosions de mort du boss (16, une toutes les 8 frames).
+- Branchés côté MD : SFX_BOMB, SFX_BIG, SFX_BHIT/BHIT2 (bossn.c), SFX_BDEAD, SFX_BXPL (enemy.c). Non reliés : 22/23 (objets), 2B/2C/32/33/36/3B/1E, 21/24/2D, boss du stage 2 (pas de PV côté MD).
