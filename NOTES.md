@@ -480,3 +480,7 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Scène de dialogue : le scroll n'est PAS par ligne en Y mais un split horizontal (BXR 0 au-dessus de la ligne `splitRow`, 256 en dessous) → HSCROLL_LINE ; BYR 256 puis 250→180 à 0,25 px/frame. Entre 127480 et 127780 le bas défile plus vite (parallaxe) : non reproduit (MD n'a pas de VScroll par ligne).
 - Priorité des sprites = ordre SAT via `SPR_setDepth` (sinon les yeux de la princesse étaient masqués).
 - Couleurs : ids clés sur 2 étapes (126800 + médiane) et fusion pondérée par rareté (corrige le ciel violet). Connus : (le « sprite parasite » à ~128300 est le rayon de lumière de la PCE : sprites 0xeb affichés une frame sur deux = transparence par scintillement, fidèle ; une carte BG de plus à 128180), musique de la fin non portée. Retour au titre à la fin (la PCE relance le stage 1).
+
+## Jalon 43 — compression des flux
+- `tools/lzspack.py` (appelé par build_all.sh, idempotent) compresse en LZ4 par blocs de 2 Ko `bossN_flux` (N=3..6) et `ends_X_flux` ; `src/lzs.c/h` les décompresse au fil de l'eau (tampon 2,5 Ko, `LZS_ensure()` avant chaque frame, marge 512 o > frame max). Un seul flux ouvert à la fois. Décodeur vérifié en natif (boss3 complet, lectures irrégulières) et en émulateur (boss 3 affiché, fin identique).
+- ROM : 4 063 232 → 2 883 584 octets. Reste non compressé : `e2..e6_pi/rf/rl/frames` (≈1,35 Mo, accès aléatoire par ennemi : il faudrait un cache de blocs) et boss 2.

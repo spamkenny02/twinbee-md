@@ -1,3 +1,4 @@
+#include "lzs.h"
 #include "bossn.h"
 #include "resources.h"
 #include "stage.h"
@@ -30,11 +31,12 @@ static bool active;
 typedef struct { u8 cls, frame, flip; s16 x, y; } BP;
 static BP cur[40];
 static u8 curN;
-static const u8* rd;
+#define rd lzs_rd
 static s16 lastT;
 
 static void decodeFrame(void)      // une frame du flux : n, masque (forme changée), pièces
 {
+    LZS_ensure();
     const u8 n = *rd++;
     const u8* mask = rd;
     u8 i;
@@ -75,7 +77,7 @@ void BOSSN_start(s16 stageNo)
 #endif
             }
         }
-    rd = B->flux; lastT = -1; curN = 0;
+    LZS_open(B->flux); lastT = -1; curN = 0;
     hp = BOSSN_HP; active = TRUE; cx = 120; cy = 60; bx0 = by0 = 0; bx1 = by1 = -1;
 }
 
@@ -92,7 +94,7 @@ bool BOSSN_update(s16 t)
     u16 n[BOSSN_MAXCLS] = {0, 0, 0, 0, 0, 0};
     u16 c, k;
     if (!active) return FALSE;
-    if (B->loop && (t >= (s16) B->frames)) { t = t % (s16) B->frames; if (t < lastT) { rd = B->flux; lastT = -1; curN = 0; } }      // le dernier boss recommence sa trajectoire
+    if (B->loop && (t >= (s16) B->frames)) { t = t % (s16) B->frames; if (t < lastT) { LZS_open(B->flux); lastT = -1; curN = 0; } }      // le dernier boss recommence sa trajectoire
     if (t >= (s16) B->frames) return FALSE;
     while (lastT < t) { decodeFrame(); lastT++; }
     bx0 = 999; bx1 = -999; by0 = 999; by1 = -999;

@@ -1,5 +1,6 @@
 // Fin du jeu (après le boss du stage 6) rejouée depuis la PCE : fond défilant en 3 cartes (tuiles réduites par tools/mkend.py),
 // chronologie de palette interpolée (fondus), défilement par segments mesurés sur dumps/end6b (dumps tous les 20 frames).
+#include "lzs.h"
 #include <genesis.h>
 #include "end.h"
 #include "mus.h"
@@ -19,7 +20,7 @@ static const SprInfo sinfo[3] = {
 typedef struct { u8 cls, flip; u16 frame; s16 x, y; } EP;
 static EP ecur[64];
 static u8 ecurN;
-static const u8* erd;
+#define erd lzs_rd
 static s32 elast;
 static Sprite* esp[8][48];
 static const SprInfo* SI;
@@ -36,7 +37,7 @@ static void sprStart(const SprInfo* si)
             esp[c][k] = SPR_addSpriteSafe(si->defs[c], 0, -64, TILE_ATTR(si->cpal[c], FALSE, FALSE, FALSE));
             if (esp[c][k]) { SPR_setVisibility(esp[c][k], HIDDEN); edep[c][k] = 0x7FFF; }
         }
-    erd = si->flux; elast = -1; ecurN = 0;
+    LZS_open(si->flux); elast = -1; ecurN = 0;
 }
 
 static void sprStop(void)
@@ -49,6 +50,7 @@ static void sprStop(void)
 
 static void sprFrame(void)
 {
+    LZS_ensure();
     const u8 n = *erd++;
     const u8* mask = erd;
     u8 i;
