@@ -26,7 +26,7 @@ def w16(addr, swap):   # mots 16 bits big-endian ; Genesis Plus GX stocke la RAM
     v = (a << 8) | b; return np.where(v >= 0x8000, v - 0x10000, v)
 gf = sym['gameFrame']; swap = not (np.diff(w16(gf, False)[-50:]) == 1).all()
 assert (np.diff(w16(gf, swap)[-50:]) == 1).all(), 'gameFrame introuvable'
-P = sym['player']; fld = ['x', 'y', 'shotActive', 'shotX', 'shotY', 'charge', 'chargedLevel', 'chargedX', 'chargedY']
+P = sym.get('players', sym.get('player')); fld = ['x', 'y', 'shotActive', 'shotX', 'shotY', 'charge', 'chargedLevel', 'chargedX', 'chargedY']
 md = {n: w16(P + 2 * i, swap)[10:] for i, n in enumerate(fld)}    # index 0 = frame F0 (début des entrées)
 os.remove('md/shots/%s.ramtrace' % name)
 # --- position : PCE RAM $BB/$BD

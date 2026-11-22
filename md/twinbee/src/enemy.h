@@ -32,6 +32,10 @@ typedef struct
 } EnemyState;
 
 extern EnemyState enemies;
+// positions des joueurs vues par les ennemis (objets joueur, une frame de retard) ; on = joueur présent et dans la partie
+typedef struct { s16 x, y; s16 on; } EnemyPlayer;
+extern EnemyPlayer enemyPlayer[2];
+extern u16 enemyBonus2;               // points gagnés par le joueur 2 pendant ENEMY_update
 
 void ENEMY_init(void);
 // déplace les ennemis ; *bonus reçoit les points gagnés (bonus de groupe, ennemis détruits au contact) ;
@@ -41,7 +45,7 @@ extern s16 enemyShotHW, enemyShotHH;                   // demi-boîte du tir tes
 bool ENEMY_hitByShot(s16 shotX, s16 shotY);     // coordonnées sprite du tir ; TRUE si un ennemi est détruit
 // tir chargé : centre et demi-tailles (table d'origine $CAEA : 15x20 au niveau 1, 28x52 au niveau 2) ; il traverse les ennemis
 s16 ENEMY_hitByCharged(s16 cx, s16 cy, s16 hw, s16 hh);  // renvoie le nombre d'ennemis détruits
-void ENEMY_bombPress(s16 px, s16 py);          // bouton bombe : lance une bombe (2 en vol au maximum)
+void ENEMY_bombPress(s16 px, s16 py, s16 owner);          // bouton bombe : lance une bombe (2 en vol au maximum)
 void ENEMY_draw(void);
 
 #endif

@@ -23,7 +23,7 @@ void TITLE_run(void)
         const u16 joy = JOY_readJoypad(JOY_1);
         if ((joy & BUTTON_START) && !(prev & BUTTON_START)) break;
         prev = joy;
-        if ((f & 31) == 0) VDP_drawText(((f >> 5) & 1) ? "                " : "PUSH START BUTTON", 11, 24);
+        if ((f & 31) == 0) VDP_drawText(((f >> 5) & 1) ? "                 " : "PUSH START BUTTON", 11, 24);
         f++;
         SYS_doVBlankProcess();
     }

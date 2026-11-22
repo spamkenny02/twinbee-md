@@ -7,6 +7,8 @@
 #define PF_XOFF         8
 
 #define PLAYER_START_X  64
+#define PLAYER_START_X2 160         // WinBee (joueur 2) : x de départ / de réapparition
+#define START_LIVES2    2
 #define PLAYER_START_Y  159
 #define PLAYER_MIN_X    16
 #define PLAYER_MAX_X    225
@@ -65,14 +67,18 @@ typedef struct
     s16 flags;              // bonus ($3438) : voir PW_*
     s16 barrier;            // barrière de la cloche rouge ($34AE) : coups restants (10 au ramassage)
     s16 shotTw, shot2Tw;    // le tir en vol est un tir double (sprite et boîte de collision plus larges)
+    s16 active;             // joueur présent dans la partie (le joueur 2 n'y entre qu'avec RUN / START de la manette 2)
     s16 armHidden;          // bras non dessinés cette frame (bit 0 gauche, bit 1 droit) : sert à la vérification
 } PlayerState;
 
-extern PlayerState player;
+extern PlayerState players[2];
+#define player players[0]       // joueur 1 : accès historique
+extern s16 playerCur;            // joueur visé par PLAYER_contact / PLAYER_kill
 
 void PLAYER_init(void);
-void PLAYER_update(u16 joy, u16 frame);   // logique d'une frame
-void PLAYER_draw(void);
+void PLAYER_join(void);                    // entrée du joueur 2
+void PLAYER_update(s16 n, u16 joy, u16 frame);   // logique d'une frame du joueur n
+void PLAYER_draw(s16 n);
 s16 PLAYER_contact(bool armZone, bool enemyLeft);   // armZone : les 3 derniers pixels de la boîte ; enemyLeft : ennemi à gauche du joueur
 void PLAYER_kill(void);                    // contact avec un ennemi (sans effet si invincible ou déjà touché)                    // position des sprites
 

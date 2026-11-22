@@ -46,7 +46,7 @@ static const u8 bellTab[30] = { 2,0,0,0,0, 3,0,0,0,0, 1,0,0,0,0, 4,0,0,0,0, 5,0,
 static u8 bellRoll(void)
 {
     u8 v;
-    const s16 f = player.flags;
+    const s16 f = players[0].flags | (players[1].active ? players[1].flags : 0);
     if (++bellCnt >= 30) bellCnt = 0;
     v = bellTab[bellCnt];
     if ((v == 3) && (f & PW_TWIN)) v = 0;
@@ -56,17 +56,17 @@ static u8 bellRoll(void)
     return v;
 }
 static s16 popOn[MAX_POPUPS], popX[MAX_POPUPS], popY[MAX_POPUPS];
-static s16 impTimer[2], impX[2], impY[2];
-static u32 shownScore;
-static s16 prevShot[2][3], prevCharged[3];   // tirs à la frame précédente : actif/niveau, x, y
+static s16 impTimer[4], impX[4], impY[4];
+static u32 shownScore[2];
+static s16 prevShot[2][2][3], prevCharged[2][3];   // tirs à la frame précédente : actif/niveau, x, y
 s16 stageClearTimer;
 bool debugInvincible;                   // bouton A tenu : pas de contact ennemi/joueur (sert aux comparaisons)
-static s16 shownLives;
-static s16 prevPlayerY;
-static s16 prevPlayerX;                 // x du joueur à la frame précédente (= x de l'objet joueur vu par les ennemis)
-static s16 shownCharge;
+static s16 shownLives, shownLives2;
+static s16 prevPlayerY[2];
+static s16 prevPlayerX[2];                 // x du joueur à la frame précédente (= x de l'objet joueur vu par les ennemis)
+static s16 shownCharge[2];
 
-static Sprite *sCloud[MAX_CLOUDS], *sBell[MAX_BELLS], *sPop[MAX_POPUPS], *sImp[2];
+static Sprite *sCloud[MAX_CLOUDS], *sBell[MAX_BELLS], *sPop[MAX_POPUPS], *sImp[4];
 
 static s16 camY(void) { return (mapH - PLAYFIELD_H) - stage.scroll; }
 
@@ -93,33 +93,45 @@ static void hudTile(u16 tile, u16 x, u16 y)
     VDP_setTileMapXY(WINDOW, TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, hudBase + tile), x, y);
 }
 
-static void hudDrawScore(void)
+static void hudDrawScore(s16 n)
 {
-    u32 v = stage.score;
+    u32 v = n ? stage.score2 : stage.score;
+    const s16 o = n ? 15 : 0;
     s16 x;
-    // score cadré à droite, dernier chiffre en colonne 13 de la 2e ligne du HUD
+    // score cadré à droite, dernier chiffre en colonne 13 de la 2e ligne du HUD (28 pour le joueur 2, décalé de 15 colonnes)
     for (x = 13; x >= 7; x--)
     {
-        if ((v == 0) && (x != 13)) hudTile(HUD_TILE_BLANK, x, PLAYFIELD_H / 8 + 1);
-        else hudTile(hud_digit_tiles[v % 10], x, PLAYFIELD_H / 8 + 1);
+        if ((v == 0) && (x != 13)) hudTile(HUD_TILE_BLANK, x + o, PLAYFIELD_H / 8 + 1);
+        else hudTile(hud_digit_tiles[v % 10], x + o, PLAYFIELD_H / 8 + 1);
         v /= 10;
     }
-    shownScore = stage.score;
+    shownScore[n] = n ? stage.score2 : stage.score;
 }
 
-static void hudDrawGauge(void)
+static void hudDrawGauge(s16 n)
 {
     // jauge de 40 px (5 tuiles, colonnes 9 à 13) : largeur remplie = charge arrondie au pair ; blanche à 40
-    const s16 w = player.charge & ~1;
+    const s16 ch = players[n].charge;
+    const s16 w = ch & ~1;
+    const s16 o = n ? 15 : 0;
     s16 i;
     for (i = 0; i < 5; i++)
     {
         s16 f = w - 8 * i;
         if (f < 0) f = 0;
         if (f > 8) f = 8;
-        hudTile(hud_gauge_tiles[i][(player.charge >= CHARGE_MAX) ? 5 : (f >> 1)], 9 + i, PLAYFIELD_H / 8);
+        hudTile(hud_gauge_tiles[i][(ch >= CHARGE_MAX) ? 5 : (f >> 1)], 9 + i + o, PLAYFIELD_H / 8);
     }
-    shownCharge = player.charge;
+    shownCharge[n] = ch;
+}
+
+// le joueur 2 entre : « 2P PRESS RUN » est remplacé par « 2P ♥ n » avec jauge et score propres
+void STAGE_join(void)
+{
+    VDP_drawImageEx(WINDOW, &hud2_image, TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, clearInd), 16, PLAYFIELD_H / 8, FALSE, TRUE);
+    clearInd += hud2_image.tileset->numTile;
+    shownLives2 = -1;
+    hudDrawScore(1); hudDrawGauge(1);
 }
 
 // ---------------------------------------------------------------- init
@@ -192,6 +204,8 @@ void STAGE_init(void)
     for (i = 0; i < MAX_POPUPS; i++) sPop[i] = add(&spr_pop500, PAL2, 3);
     sImp[0] = add(&spr_imp, PAL3, 3);
     sImp[1] = add(&spr_imp, PAL3, 3);
+    sImp[2] = add(&spr_imp, PAL3, 3);
+    sImp[3] = add(&spr_imp, PAL3, 3);
     ENEMY_init();
 
     stageClearTimer = 0;
@@ -205,15 +219,15 @@ void STAGE_init(void)
 #define DBG_BELLCNT 0
 #endif
     bellCnt = DBG_BELLCNT;
-    prevPlayerX = PLAYER_START_X; prevPlayerY = PLAYER_START_Y;
-    shownLives = START_LIVES;
+    prevPlayerX[0] = PLAYER_START_X; prevPlayerY[0] = PLAYER_START_Y; prevPlayerX[1] = PLAYER_START_X2; prevPlayerY[1] = RESPAWN_Y;
+    shownLives = START_LIVES; shownLives2 = -1;
     memset(prevShot, 0, sizeof(prevShot)); memset(prevCharged, 0, sizeof(prevCharged));
-    impTimer[0] = impTimer[1] = 0;
+    memset(impTimer, 0, sizeof(impTimer));
     palEventPos = 0; boss2On = FALSE;
     applyPaletteEvents((camY() >> 3) - 2);
     MAP_scrollToEx(bg, 0, camY(), TRUE);
-    hudDrawScore();
-    hudDrawGauge();
+    hudDrawScore(0);
+    hudDrawGauge(0);
     PAL_setColor(0, backdropCol);
 }
 
@@ -242,17 +256,19 @@ static void spawnPopup(s16 x, s16 y)
 }
 
 // un tir normal détruit le premier ennemi qu'il touche (100 points)
-static void shotVsEnemies(s16* active, s16 sx, s16 sy, s16 n)
+static void addScore(s16 pn, u32 v) { if (pn) stage.score2 += v; else stage.score += v; }
+
+static void shotVsEnemies(s16 pn, s16* active, s16 sx, s16 sy, s16 n)
 {
     if (!*active) return;
     {
-        const bool tw = n ? player.shot2Tw : player.shotTw;
+        const bool tw = n ? players[pn].shot2Tw : players[pn].shotTw;
         enemyShotHW = tw ? 12 : 8; enemyShotHH = tw ? 12 : 16;
     }
     if (!ENEMY_hitByShot(sx, sy)) return;
     *active = FALSE;
-    impTimer[n] = 2; impX[n] = sx; impY[n] = sy;
-    stage.score += ENEMY_SCORE;
+    impTimer[pn * 2 + n] = 2; impX[pn * 2 + n] = sx; impY[pn * 2 + n] = sy;
+    addScore(pn, ENEMY_SCORE);
 }
 
 // Collisions d'un tir normal avec les nuages et les cloches.
@@ -260,9 +276,9 @@ static void shotVsEnemies(s16* active, s16 sx, s16 sy, s16 n)
 // nuages = objets 90 et suivants, cloches = objets 89 en descendant.
 #define CLOUD_OBJ_INDEX 90
 #define BELL_OBJ_INDEX  89
-static void shotCollisions(s16* active, s16 sx, s16 sy, s16 n)
+static void shotCollisions(s16 pn, s16* active, s16 sx, s16 sy, s16 n)
 {
-    const bool isNew = !prevShot[n][0];     // à sa frame d'apparition, le tir teste tous les nuages
+    const bool isNew = !prevShot[pn][n][0];     // à sa frame d'apparition, le tir teste tous les nuages
     s16 i, j;
 
     if (!*active) return;
@@ -290,7 +306,7 @@ static void shotCollisions(s16* active, s16 sx, s16 sy, s16 n)
         {
             if (bellV[j] > BELL_V_NOHIT) { bellV[j] = BELL_V_HIT; bellCol[j] = bellRoll(); SFX_play(SFX_BELLHIT); }     // la cloche repart vers le haut ; nouvelle couleur
             *active = FALSE;                        // le tir est consommé
-            impTimer[n] = 2; impX[n] = sx; impY[n] = sy;
+            impTimer[pn * 2 + n] = 2; impX[pn * 2 + n] = sx; impY[pn * 2 + n] = sy;
             break;
         }
     }
@@ -311,23 +327,30 @@ void STAGE_update(void)
     // --- cloches déjà présentes : ramassage par le joueur, puis déplacement
     for (i = 0; i < MAX_BELLS; i++)
     {
-        s16 dx, dy;
+        s16 dx, dy, pn;
         if (!stage.bellOn[i]) continue;
-        dx = stage.bellX[i] + 8 - player.x;
-        dy = stage.bellY[i] + 8 - player.y;
-        if ((player.phase != 1) && (dx >= -13) && (dx <= 13) && (dy >= -13) && (dy <= 13))
+        for (pn = 0; pn < 2; pn++)
         {
+            PlayerState* pl = &players[pn];
+            if (!pl->active || (pl->phase == 1) || (pl->phase == 3)) continue;
+            dx = stage.bellX[i] + 8 - pl->x;
+            dy = stage.bellY[i] + 8 - pl->y;
+            if ((dx >= -13) && (dx <= 13) && (dy >= -13) && (dy <= 13)) break;
+        }
+        if (pn < 2)
+        {
+            PlayerState* pl = &players[pn];
             stage.bellOn[i] = FALSE;
-            stage.score += BELL_SCORE;
+            addScore(pn, BELL_SCORE);
             SFX_play(SFX_BELLGET);
             switch (bellCol[i])     // effets lus en $17:$AFE2 et suivants
             {
-                case 1: if (player.speedLvl < 0x12) player.speedLvl += 2; break;
-                case 2: if (player.speedLvl > 0) player.speedLvl -= 2; break;
-                case 3: player.flags = (player.flags & ~0x08) | PW_TWIN; break;
-                case 4: player.flags |= PW_OPT1; break;
-                case 5: player.flags |= PW_BARRIER; player.barrier = 10; SFX_play(SFX_POWER); break;
-                case 6: player.flags |= PW_OPT2; break;
+                case 1: if (pl->speedLvl < 0x12) pl->speedLvl += 2; break;
+                case 2: if (pl->speedLvl > 0) pl->speedLvl -= 2; break;
+                case 3: pl->flags = (pl->flags & ~0x08) | PW_TWIN; break;
+                case 4: pl->flags |= PW_OPT1; break;
+                case 5: pl->flags |= PW_BARRIER; pl->barrier = 10; SFX_play(SFX_POWER); break;
+                case 6: pl->flags |= PW_OPT2; break;
             }
             spawnPopup(stage.bellX[i] - 8, stage.bellY[i] - 2);
             continue;
@@ -374,32 +397,53 @@ void STAGE_update(void)
 
     // --- ennemis : collisions avec les positions de la frame précédente (comme l'original, qui teste avant
     //     de déplacer : l'ennemi touché reste figé), puis déplacement
-    if (prevShot[0][0]) shotVsEnemies(&player.shotActive, prevShot[0][1], prevShot[0][2], 0);
-    if (prevShot[1][0]) shotVsEnemies(&player.shot2Active, prevShot[1][1], prevShot[1][2], 1);
-    if (prevCharged[0] == 1) stage.score += ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[1], prevCharged[2] + 16, 15, 20);
-    else if (prevCharged[0] == 2) stage.score += ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[1], prevCharged[2] + 48, 27, 52);
+    {
+        s16 pn;
+        for (pn = 0; pn < 2; pn++)
+        {
+            PlayerState* pl = &players[pn];
+            if (!pl->active) continue;
+            if (prevShot[pn][0][0]) shotVsEnemies(pn, &pl->shotActive, prevShot[pn][0][1], prevShot[pn][0][2], 0);
+            if (prevShot[pn][1][0]) shotVsEnemies(pn, &pl->shot2Active, prevShot[pn][1][1], prevShot[pn][1][2], 1);
+            if (prevCharged[pn][0] == 1) addScore(pn, ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[pn][1], prevCharged[pn][2] + 16, 15, 20));
+            else if (prevCharged[pn][0] == 2) addScore(pn, ENEMY_SCORE * ENEMY_hitByCharged(prevCharged[pn][1], prevCharged[pn][2] + 48, 27, 52));
+        }
+    }
     {
         u16 bonus;
+        s16 pn;
         // l'objet joueur vu par les ennemis a une frame de retard sur la position commandée
+        for (pn = 0; pn < 2; pn++)
         {
-            static u16 prevBombJoy;
-            const u16 j = JOY_readJoypad(JOY_1);
-            if ((j & BUTTON_C) && !(prevBombJoy & BUTTON_C)) ENEMY_bombPress(prevPlayerX, prevPlayerY);
-            prevBombJoy = j;
+            static u16 prevBombJoy[2];
+            const u16 j = JOY_readJoypad(pn ? JOY_2 : JOY_1);
+            if (players[pn].active && (players[pn].phase != 3) && (j & BUTTON_C) && !(prevBombJoy[pn] & BUTTON_C)) ENEMY_bombPress(prevPlayerX[pn], prevPlayerY[pn], pn);
+            prevBombJoy[pn] = j;
+            enemyPlayer[pn].x = prevPlayerX[pn]; enemyPlayer[pn].y = prevPlayerY[pn]; enemyPlayer[pn].on = players[pn].active && (players[pn].phase != 3);
         }
-        ENEMY_update(stage.frame, prevPlayerX, prevPlayerY, delta, &bonus, !debugInvincible);
+        enemyBonus2 = 0;
+        ENEMY_update(stage.frame, prevPlayerX[0], prevPlayerY[0], delta, &bonus, !debugInvincible);
         stage.score += bonus;
+        stage.score2 += enemyBonus2;
         if (enemies.bossDead && !stageClearTimer) { stage.score += 10000; stageClearTimer = 1; }
     }
-    prevPlayerX = player.x; prevPlayerY = player.y;
+    prevPlayerX[0] = players[0].x; prevPlayerY[0] = players[0].y;
+    prevPlayerX[1] = players[1].x; prevPlayerY[1] = players[1].y;
 
     // --- tirs normaux : libèrent la cloche des nuages traversés, puis rebondissent sur une cloche
-    shotCollisions(&player.shotActive, player.shotX, player.shotY, 0);
-    shotCollisions(&player.shot2Active, player.shot2X, player.shot2Y, 1);
-
-    prevShot[0][0] = player.shotActive; prevShot[0][1] = player.shotX; prevShot[0][2] = player.shotY;
-    prevShot[1][0] = player.shot2Active; prevShot[1][1] = player.shot2X; prevShot[1][2] = player.shot2Y;
-    prevCharged[0] = player.chargedLevel; prevCharged[1] = player.chargedX; prevCharged[2] = player.chargedY;
+    {
+        s16 pn;
+        for (pn = 0; pn < 2; pn++)
+        {
+            PlayerState* pl = &players[pn];
+            if (!pl->active) continue;
+            shotCollisions(pn, &pl->shotActive, pl->shotX, pl->shotY, 0);
+            shotCollisions(pn, &pl->shot2Active, pl->shot2X, pl->shot2Y, 1);
+            prevShot[pn][0][0] = pl->shotActive; prevShot[pn][0][1] = pl->shotX; prevShot[pn][0][2] = pl->shotY;
+            prevShot[pn][1][0] = pl->shot2Active; prevShot[pn][1][1] = pl->shot2X; prevShot[pn][1][2] = pl->shot2Y;
+            prevCharged[pn][0] = pl->chargedLevel; prevCharged[pn][1] = pl->chargedX; prevCharged[pn][2] = pl->chargedY;
+        }
+    }
     if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On) { BOSS2_start(); boss2On = TRUE; }
     if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
     else if ((stageNo >= 3) && !BOSSN_available(stageNo) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
@@ -481,7 +525,7 @@ bells:
         SPR_setVisibility(sPop[i], popOn[i] ? VISIBLE : HIDDEN);
         if (popOn[i]) SPR_setPosition(sPop[i], popX[i] + PF_XOFF, popY[i]);
     }
-    for (i = 0; i < 2; i++)
+    for (i = 0; i < 4; i++)
     {
         SPR_setVisibility(sImp[i], impTimer[i] ? VISIBLE : HIDDEN);
         if (!impTimer[i]) continue;
@@ -491,13 +535,23 @@ bells:
     }
 
     ENEMY_draw();
-    if (stage.score != shownScore) hudDrawScore();
+    if (stage.score != shownScore[0]) hudDrawScore(0);
     if (player.lives != shownLives)
     {
         shownLives = player.lives;
         hudTile(hud_digit_tiles[(shownLives > 0) ? shownLives : 0], 7, PLAYFIELD_H / 8);
     }
-    if (player.charge != shownCharge) hudDrawGauge();
+    if (player.charge != shownCharge[0]) hudDrawGauge(0);
+    if (players[1].active)
+    {
+        if (stage.score2 != shownScore[1]) hudDrawScore(1);
+        if (players[1].lives != shownLives2)
+        {
+            shownLives2 = players[1].lives;
+            hudTile(hud_digit_tiles[(shownLives2 > 0) ? shownLives2 : 0], 22, PLAYFIELD_H / 8);
+        }
+        if (players[1].charge != shownCharge[1]) hudDrawGauge(1);
+    }
     if (boss2On) BOSS2_update(stage.frame - BOSS2_START); else MAP_scrollTo(bg, 0, camY());
 }
 

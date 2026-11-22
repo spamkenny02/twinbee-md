@@ -26,6 +26,7 @@ typedef struct
     u32 score;
     s16 cloudOn[MAX_CLOUDS], cloudX[MAX_CLOUDS], cloudY[MAX_CLOUDS], cloudBell[MAX_CLOUDS];
     s16 bellOn[MAX_BELLS], bellX[MAX_BELLS], bellY[MAX_BELLS];
+    u32 score2;                     // score du joueur 2 (en fin de structure : les outils de test lisent les champs précédents par offset)
 } StageState;
 
 extern StageState stage;
@@ -34,6 +35,7 @@ extern u8 stageNo;                     // stage en cours (1 ou 2), à fixer avan
 extern s16 stageClearTimer;            // > 0 : boss de fin vaincu, frames écoulées depuis
 
 void STAGE_init(void);
+void STAGE_join(void);              // le joueur 2 entre : HUD 2P
 void STAGE_update(void);            // une frame de jeu (après PLAYER_update)
 void STAGE_draw(void);              // position des sprites, défilement, HUD
 void STAGE_releaseClouds(void);

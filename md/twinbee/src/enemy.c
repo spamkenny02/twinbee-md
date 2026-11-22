@@ -18,11 +18,14 @@ static s16 spawnedG, scrollHist[4];
 #ifndef GSH
 #define GSH         0           // retard (en frames) du défilement suivi par les ennemis au sol
 #endif
-#define NUM_BOMBS   2
+#define NUM_BOMBS   4                   // 2 voies par joueur (0-1 : joueur 1, 2-3 : joueur 2)
 #define GFR         16          // images 16-19 : ennemis au sol (types 13/14), 20 : bombe (dans la feuille spr_enemy)
 // bombes (bouton I de l'original) : 2 emplacements (voies gauche / droite), viseur automatique sur l'ennemi au sol le plus proche
 static s16 bombHitX[NUM_BOMBS], bombHitY[NUM_BOMBS], bombOn[NUM_BOMBS], bombX[NUM_BOMBS], bombT[NUM_BOMBS], bombTarget[NUM_BOMBS], bombLandY[NUM_BOMBS], bombKillIn[NUM_BOMBS];
 static s32 bombFy[NUM_BOMBS];
+EnemyPlayer enemyPlayer[2];
+u16 enemyBonus2;
+static s16 curBombOwner;           // joueur dont la bombe vient d'exploser / joueur en contact
 static s16 itemOn[2], itemX[2], itemY0[2], itemT[2], itemKind[2], groundKills;   // fruits (voir itemDrop)
 static Sprite* sItem[2];
 static const u8 gwalkTab[5] = {0x60, 0, 0x80, 1, 0};     // marcheurs (type 15) : $4FD0 = durée, marche
@@ -257,21 +260,29 @@ static void kill(s16 i)
 // contact ennemi -> joueur (voir enemy.h) ; renvoie rien, détruit l'ennemi et crédite les points si le contact a un effet
 static void contact(s16 i, s16 f, s16 playerObjX, s16 playerObjY, u16* bonus)
 {
-    if (((f + ENEMY_PARITY_I * i) & 1) == ENEMY_PARITY)
+    s16 pn;
+    if (((f + ENEMY_PARITY_I * i) & 1) != ENEMY_PARITY) return;
+    for (pn = 0; pn < 2; pn++)
     {
-        const s16 dx = playerObjX - enemies.x[i];       // > 0 : ennemi à gauche du joueur
-        const s16 dy = playerObjY - enemies.y[i];
-        const s16 adx = (dx < 0) ? -dx : dx, ady = (dy < 0) ? -dy : dy;
-        const s16 hx = HWK(KIND[i]);
+        s16 dx, dy, adx, ady, hx;
+        if (!enemyPlayer[pn].on) continue;
+        dx = enemyPlayer[pn].x - enemies.x[i];          // > 0 : ennemi à gauche du joueur
+        dy = enemyPlayer[pn].y - enemies.y[i];
+        adx = (dx < 0) ? -dx : dx; ady = (dy < 0) ? -dy : dy;
+        hx = HWK(KIND[i]);
         if ((adx < 10 + hx) && (ady < 7 + HHK(KIND[i])))
         {
+            playerCur = pn;
             if (PLAYER_contact(adx >= 7 + hx, dx > 0) != CONTACT_NONE)
             {
+                u16* b2 = pn ? &enemyBonus2 : bonus;
                 if (KIND[i] == 12) kill(i);
-                else if ((KIND[i] != 11) && (KIND[i] != 16)) { kill(i); *bonus += ENEMY_SCORE; }
+                else if ((KIND[i] != 11) && (KIND[i] != 16)) { kill(i); *b2 += ENEMY_SCORE; }
+                break;
             }
         }
     }
+    playerCur = 0;
 }
 
 
@@ -285,9 +296,9 @@ static void itemDrop(s16 x, s16 y)
     if (k == 2) return;
     itemOn[k] = 1; itemX[k] = x; itemY0[k] = y; itemT[k] = 0; itemKind[k] = (groundKills++) & 1;
 }
-static void itemUpdate(s16 px, s16 py)
+static void itemUpdate(void)
 {
-    s16 k;
+    s16 k, pn;
     for (k = 0; k < 2; k++)
     {
         s16 y;
@@ -295,11 +306,16 @@ static void itemUpdate(s16 px, s16 py)
         itemT[k]++;
         y = itemY0[k] + itemT[k] / 3;
         {
-            s16 dx = px - itemX[k], dy = py - y;
-            if (dx < 0) dx = -dx;
-            if (dy < 0) dy = -dy;
-            if ((dx < 12) && (dy < 12)) { SFX_play(SFX_BELLGET); itemOn[k] = 0; }
-            else if (y > 166) itemOn[k] = 0;
+            for (pn = 0; pn < 2; pn++)
+            {
+                s16 dx, dy;
+                if (!enemyPlayer[pn].on) continue;
+                dx = enemyPlayer[pn].x - itemX[k]; dy = enemyPlayer[pn].y - y;
+                if (dx < 0) dx = -dx;
+                if (dy < 0) dy = -dy;
+                if ((dx < 12) && (dy < 12)) { SFX_play(SFX_BELLGET); itemOn[k] = 0; break; }
+            }
+            if (itemOn[k] && (y > 166)) itemOn[k] = 0;
         }
         if (!itemOn[k]) { if (sItem[k]) { SPR_releaseSprite(sItem[k]); sItem[k] = NULL; } continue; }
         if (!sItem[k]) { sItem[k] = SPR_addSpriteSafe(&spr_item, 0, -64, TILE_ATTR(PAL2, FALSE, FALSE, FALSE)); if (sItem[k]) SPR_setFrame(sItem[k], itemKind[k]); }
@@ -309,11 +325,11 @@ static void itemUpdate(s16 px, s16 py)
 
 // bouton bombe : une bombe par voie libre (38 = gauche, 43 = droite) ; point de visée = ennemi au sol le plus proche non déjà visé
 // (|dx| < 32 du joueur, vu entre y = 70 et 150), sinon (x du joueur, y = 111) ; la bombe part de y du joueur, x visée -+ 12
-void ENEMY_bombPress(s16 px, s16 py)
+void ENEMY_bombPress(s16 px, s16 py, s16 owner)
 {
     s16 b, i, best = -1, bestDx = 32, cx = px, ly = 111;
-    for (b = 0; b < NUM_BOMBS; b++) if (!bombOn[b]) break;
-    if (b == NUM_BOMBS) return;
+    for (b = owner * 2; b < owner * 2 + 2; b++) if (!bombOn[b]) break;
+    if (b == owner * 2 + 2) return;
     for (i = 0; i < MAX_ENEMIES; i++)
     {
         s16 dx, k;
@@ -326,7 +342,7 @@ void ENEMY_bombPress(s16 px, s16 py)
     }
     if (best >= 0) cx = enemies.x[best];
     bombOn[b] = 1; bombT[b] = 0; bombTarget[b] = best; bombLandY[b] = ly; bombKillIn[b] = 0;
-    bombX[b] = cx + ((b == 0) ? -12 : 12);
+    bombX[b] = cx + ((b & 1) ? 12 : -12);
     bombFy[b] = (s32) (py - 5) << 8;
 }
 
@@ -347,7 +363,7 @@ static void bombsUpdate(u16* bonus)
                     if ((enemies.on[i] != 1) || ((KIND[i] != 14) && (KIND[i] != 15))) continue;
                     if (dx < 0) dx = -dx;
                     if (dy < 0) dy = -dy;
-                    if ((dx < 12) && (dy < 12)) { itemDrop(enemies.x[i], enemies.y[i]); kill(i); *bonus += ENEMY_SCORE; }
+                    if ((dx < 12) && (dy < 12)) { itemDrop(enemies.x[i], enemies.y[i]); kill(i); if (b >= 2) enemyBonus2 += ENEMY_SCORE; else *bonus += ENEMY_SCORE; }
                 }
                 bombOn[b] = 0;
             }
@@ -360,7 +376,7 @@ static void bombsUpdate(u16* bonus)
         if ((i >= 0) && (enemies.on[i] == 1)) bombLandY[b] = enemies.y[i]; else if (i >= 0) bombTarget[b] = -1;
         if ((bombFy[b] >> 8) <= bombLandY[b] + ((bombTarget[b] >= 0) ? 0 : 4))
         {
-            bombHitX[b] = (bombTarget[b] >= 0) ? enemies.x[bombTarget[b]] : bombX[b] + ((b == 0) ? 12 : -12);
+            bombHitX[b] = (bombTarget[b] >= 0) ? enemies.x[bombTarget[b]] : bombX[b] + ((b & 1) ? -12 : 12);
             bombHitY[b] = bombFy[b] >> 8;
             bombKillIn[b] = 4;
         }
@@ -402,8 +418,16 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     s16 i;
 
     *bonus = 0;
-    itemUpdate(playerObjX, playerObjY);
-    if (contactOn && bnOn && BOSSN_contact(playerObjX, playerObjY)) PLAYER_contact(FALSE, FALSE);
+    {   // 2 joueurs : les ennemis visent le joueur en vie le plus proche (règle d'origine non vérifiée)
+        s16 pn;
+        if (enemyPlayer[1].on && (players[1].phase == 0) && (!enemyPlayer[0].on || (players[0].phase != 0)))
+        { playerObjX = enemyPlayer[1].x; playerObjY = enemyPlayer[1].y; }       // le joueur 1 est touché ou éliminé : tous visent le joueur 2
+        itemUpdate();
+        if (contactOn && bnOn)
+            for (pn = 0; pn < 2; pn++)
+                if (enemyPlayer[pn].on && BOSSN_contact(enemyPlayer[pn].x, enemyPlayer[pn].y)) { playerCur = pn; PLAYER_contact(FALSE, FALSE); }
+        playerCur = 0;
+    }
     scrollHist[3] = scrollHist[2]; scrollHist[2] = scrollHist[1]; scrollHist[1] = scrollHist[0]; scrollHist[0] = scrollDelta;
     for (i = 0; i < MAX_EX; i++)
     {
@@ -782,7 +806,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     bombsUpdate(bonus);
     {
         s16 b;
-        for (b = 0; b < NUM_BOMBS; b++) { enemies.bombState[b] = bombOn[b] ? ((bombKillIn[b]) ? 2 : 1) : 0; enemies.bombX[b] = bombX[b]; enemies.bombY[b] = bombFy[b] >> 8; }
+        for (b = 0; b < 2; b++) { enemies.bombState[b] = bombOn[b] ? ((bombKillIn[b]) ? 2 : 1) : 0; enemies.bombX[b] = bombX[b]; enemies.bombY[b] = bombFy[b] >> 8; }
     }
     // ennemis au sol : apparaissent en haut (y = -31 ou -32) ; ceux de type 13/14 ont déjà fait un cycle de leur routine, ceux de type 15 une avance de 1/3 px
     while ((spawnedG < STAGE1_NUM_GROUND) && (stage1_ground[spawnedG].frame <= f))

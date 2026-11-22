@@ -8,6 +8,7 @@ IMAGE intro_kcol "intro_kcol.png" NONE ALL
 SPRITE intro_cloud "intro_cloud.png" 8 4 NONE 0
 SPRITE intro_bee "intro_bee.png" 4 4 NONE 0
 SPRITE intro_star "intro_star.png" 1 1 NONE 0
+IMAGE hud2_image "hud2.png" NONE ALL
 SPRITE spr_body "spr_body.png" 2 2 NONE 0
 SPRITE spr_arm "spr_arm.png" 2 2 NONE 0
 SPRITE spr_bell "spr_bell.png" 2 2 NONE 0

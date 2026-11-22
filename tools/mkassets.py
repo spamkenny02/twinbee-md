@@ -69,6 +69,8 @@ hud.putpalette(p3); hud.save(RES + 'hud.png')
 res = ['TILESET stage1_tileset "stage1.png" BEST ALL', 'MAP stage1_map "stage1.png" stage1_tileset BEST 0', 'IMAGE hud_image "hud.png" NONE ALL', 'TILESET hud_tiles "hud_tiles.png" NONE NONE', 'IMAGE title_image "title.png" NONE ALL']
 import mkintro
 res += mkintro.build(RES)
+import mkhud2
+res += mkhud2.build(RES)
 def sheet(name, frames, lut, palette):
     h, w = S[frames[0]].shape; im = np.zeros((h, w * len(frames)), np.uint8)
     for k, f in enumerate(frames): im[:, k * w:(k + 1) * w] = np.vectorize(lambda c: 0 if c < 0 else lut[c])(S[f])

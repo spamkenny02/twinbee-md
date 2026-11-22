@@ -27,7 +27,7 @@ static void start(void)
 
 int main(bool hard)
 {
-    u16 prevJoy = 0;
+    u16 prevJoy = 0, prevJoy2 = 0;
 
     VDP_setScreenWidth256();
     VDP_setPlaneSize(64, 32, TRUE);
@@ -40,13 +40,15 @@ int main(bool hard)
 
     while (TRUE)
     {
-        const u16 joy = JOY_readJoypad(JOY_1);
+        const u16 joy = JOY_readJoypad(JOY_1), joy2 = JOY_readJoypad(JOY_2);
         s16 n = ((joy & (BUTTON_UP | BUTTON_DOWN)) == (BUTTON_UP | BUTTON_DOWN)) ? 4 : 1;        // débogage : haut + bas = vitesse x4
 
 #ifdef DBG_GAMEOVER_AT
-        if (gameFrame == DBG_GAMEOVER_AT) player.gameOver = TRUE;
+        if (gameFrame == DBG_GAMEOVER_AT) { players[0].gameOver = TRUE; players[1].gameOver = TRUE; }
 #endif
-        if (player.gameOver)                // plus de vie : retour à l'écran titre
+        // le joueur 2 entre avec START sur la manette 2 (RUN sur PC Engine), pas pendant l'écran de fin de niveau
+        if (!players[1].active && (joy2 & ~prevJoy2 & BUTTON_START) && (stageClearTimer == 0)) { PLAYER_join(); STAGE_join(); }
+        if (players[0].gameOver && (!players[1].active || players[1].gameOver))                // plus de vie : retour à l'écran titre
         {
             SPR_reset();
             TITLE_run();
@@ -77,16 +79,18 @@ int main(bool hard)
 
         while (n--)
         {
-            PLAYER_update(prevJoy, gameFrame);     // l'original applique les commandes avec une frame de retard
+            PLAYER_update(0, prevJoy, gameFrame);     // l'original applique les commandes avec une frame de retard
+            if (players[1].active) PLAYER_update(1, prevJoy2, gameFrame);
             STAGE_update();
             gameFrame++;
         }
-        PLAYER_draw();
+        PLAYER_draw(0);
+        if (players[1].active) PLAYER_draw(1);
         STAGE_draw();
         SPR_update();
         SYS_doVBlankProcess();
         STAGE_afterVBlank();
-        prevJoy = joy;
+        prevJoy = joy; prevJoy2 = joy2;
     }
     return 0;
 }

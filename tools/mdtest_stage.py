@@ -20,7 +20,7 @@ class Ram:
         a, b = (addr ^ 1, (addr + 1) ^ 1) if self.swap else (addr, addr + 1)
         v = (np.array(self.r[:, a]).astype(int) << 8) | np.array(self.r[:, b]).astype(int); return np.where(v >= 0x8000, v - 0x10000, v)
 # 1) à quelle frame émulateur la frame de jeu 0 tombe-t-elle ?
-run(['300 keys 8', '303 keys 0', '330 ramtrace boot', '380 ramtraceoff', '381 end'], 'boot'); R = Ram('md/shots/boot.ramtrace'); B = 331 + 49 - int(R.w(sym['gameFrame'])[49]); del R; os.remove('md/shots/boot.ramtrace')
+run(['300 keys 8', '303 keys 0', '310 keys 8', '313 keys 0', '330 ramtrace boot', '380 ramtraceoff', '381 end'], 'boot'); R = Ram('md/shots/boot.ramtrace'); B = 331 + 49 - int(R.w(sym['gameFrame'])[49]); del R; os.remove('md/shots/boot.ramtrace')
 # 2) rejeu
 INV = 0 if os.environ.get('MORTEL') else 2
 conv = lambda k: INV | (1 if k & 2 else 0) | (0x100 if k & 1 else 0) | (0x10 if k & 0x10 else 0) | (0x20 if k & 0x40 else 0) | (0x40 if k & 0x80 else 0) | (0x80 if k & 0x20 else 0)
@@ -30,10 +30,10 @@ for i in range(i0, N):
     k = conv(int(keys[i]))
     if k != prev: L.append('%d keys %X' % (mdf(i), k)); prev = k
 L += ['%d shot %s_%d' % (B + f - 2880, name, f) for f in shots] + ['%d ramtraceoff' % mdf(N - 1), '%d end' % (mdf(N - 1) + 2)]
-L += ['300 keys 8', '303 keys 0']
+L += ['300 keys 8', '303 keys 0', '310 keys 8', '313 keys 0']
 L.sort(key=lambda l: int(l.split()[0])); run(L, name); R = Ram('md/shots/%s.ramtrace' % name)
 gf = R.w(sym['gameFrame']); assert gf[0] == int(fr[i0]) - 2880 + 1 or True
-P = sym['player']; S = sym['stage']
+P = sym.get('players', sym.get('player')); S = sym['stage']
 pf = {n: R.w(P + 2 * i) for i, n in enumerate(['x', 'y', 'shotActive', 'shotX', 'shotY', 'charge'])}
 st_scroll = R.w(S + 2); score = (R.w(S + 4).astype(np.int64) & 0xFFFF) << 16 | (R.w(S + 6) & 0xFFFF)
 def arr(off, n): return np.stack([R.w(S + off + 2 * k) for k in range(n)], 1)
