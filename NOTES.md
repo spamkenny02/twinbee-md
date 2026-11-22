@@ -430,8 +430,10 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Vérifié à l'émulateur : stages 3, 4, 5 (ver jaune, PAL2 sans vert clair) et 6 (boss final).
 - Reste : intro, objets au sol (ventilo/bouclier/vie), décalage cloche ±4 px, hitbox barrière, jingles mort/game over, stage 6 fin.
 
-## Jalon 32 — Intro
-- `src/intro.c` : 5 scènes (logo Konami noir puis blanc, ciel, crépuscule, étoiles) = captures PCE `dumps/boot/f0180/0420/0660/0780/1020` recadrées (ligne 15, 224 lignes), quantifiées 16 couleurs ; fondus ; START abrège ; enchaîne sur le titre. Images fixes : pas d'animation des abeilles ni de l'enseigne qui descend (à faire en sprites).
+## Jalon 32 — Intro (version animée)
+- `src/intro.c` : logo Konami en images fixes (captures PCE `dumps/boot/f0180`, `f0420`), puis scène de vol entièrement animée à 60 images/s : fond en dégradé de CRAM (jour → crépuscule → nuit), 6 nuages (64×32, extraits de f0660) défilant de 1 px/image, 22 étoiles scintillantes (dessinées), TwinBee (32×32, extrait de f0900) qui monte puis flotte. Sprites générés par `tools/mkintro.py`. START abrège.
+- Première version (images fixes quantifiées, fondus) abandonnée : saccadée. Attention : `SPR_setPosition` prend des coordonnées écran (pas de +128).
+- Écarts : 1 seule abeille (l'original en a deux), pas d'enseigne qui descend dans l'intro (elle n'apparaît que sur l'écran titre).
 
 ## Jalon 33 — Fruits laissés par les ennemis au sol (corrige une première version « vie »)
 - Traces `dumps/bb4`, `dumps/it1` (partie de 9 000 frames, bombes en balayage), `dumps/it2` (joueur forcé sous l'objet par `poke 2B47`) : 5 objets de type 29, emplacements 96/97, créés à la position de l'ennemi tué à la bombe, chute 1/3 px par frame, disparition vers y 166 ; sous-type `$3468` = 0 dans les 5 cas. Ce sont des **fruits** (pêche motif 422 pal 7, pomme 419 pal 4, vus dans `dumps/it1/m5700` et `m10560`).

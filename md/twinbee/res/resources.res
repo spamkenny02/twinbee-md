@@ -5,9 +5,9 @@ TILESET hud_tiles "hud_tiles.png" NONE NONE
 IMAGE title_image "title.png" NONE ALL
 IMAGE intro_k1 "intro_k1.png" NONE ALL
 IMAGE intro_k2 "intro_k2.png" NONE ALL
-IMAGE intro_sky "intro_sky.png" NONE ALL
-IMAGE intro_dusk "intro_dusk.png" NONE ALL
-IMAGE intro_star "intro_star.png" NONE ALL
+SPRITE intro_cloud "intro_cloud.png" 8 4 NONE 0
+SPRITE intro_bee "intro_bee.png" 4 4 NONE 0
+SPRITE intro_star "intro_star.png" 1 1 NONE 0
 SPRITE spr_body "spr_body.png" 2 2 NONE 0
 SPRITE spr_arm "spr_arm.png" 2 2 NONE 0
 SPRITE spr_bell "spr_bell.png" 2 2 NONE 0

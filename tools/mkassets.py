@@ -67,7 +67,8 @@ p2 = [255, 0, 255] + [v for c in pal2 for v in rgb(c)]; p2 += [0] * (768 - len(p
 p3 = [0, 0, 0] + [v for t in pal3 for v in t]; p3 += [0] * (768 - len(p3))
 hud.putpalette(p3); hud.save(RES + 'hud.png')
 res = ['TILESET stage1_tileset "stage1.png" BEST ALL', 'MAP stage1_map "stage1.png" stage1_tileset BEST 0', 'IMAGE hud_image "hud.png" NONE ALL', 'TILESET hud_tiles "hud_tiles.png" NONE NONE', 'IMAGE title_image "title.png" NONE ALL']
-res += ['IMAGE intro_%s "intro_%s.png" NONE ALL' % (n, n) for n in ('k1', 'k2', 'sky', 'dusk', 'star')]
+import mkintro
+res += mkintro.build(RES)
 def sheet(name, frames, lut, palette):
     h, w = S[frames[0]].shape; im = np.zeros((h, w * len(frames)), np.uint8)
     for k, f in enumerate(frames): im[:, k * w:(k + 1) * w] = np.vectorize(lambda c: 0 if c < 0 else lut[c])(S[f])
