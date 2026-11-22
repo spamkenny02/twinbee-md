@@ -424,13 +424,8 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Appels (`SFX_play`, canaux PCM 2 et 3 d'XGM2, le canal 1 reste à la batterie du morceau) : tir joueur (17), ennemi détruit (1B, dans `kill()`), cloche touchée (1A), cloche ramassée (19), bonus (28 : défini, pas encore appelé).
 - Journal des requêtes en jeu (stage 1, 3400-9000, `dumps/sl2/sndlog.txt`) : 17 ×511, 1B ×98, 1A ×23, 19 ×5, 28 ×1 (frame 5088), 1D ×1, 21 ×1 : 19 suit la collecte d'une cloche colorée dans la frame suivante (ex. frame 4437 → 4438).
 
-## Jalon 29 — boss du stage 1 (anneaux + rochers)
-- Anneaux bleus (sprites, palette HUD) : lancés aux frames PCE relevées, visée 32 directions, indestructibles.
-- Rochers des murs : tuiles plan A + scroll vertical (`rockUpdate`, stage.c), trajectoire `rock_y[]` extraite des traces.
-- Les tuiles de rocher sont placées à `TILE_SPRITE_INDEX - 32` (sous la zone sprites) : l'ancien emplacement écrasait la VRAM sprites.
-- Reste : bonus (cloche rouge, objets sol), boss 3–6, intro.
-
-## Jalon 30 — Cloche rouge (barrière)
-- PCE (bank $17 `$B204`) : ramassage = minuteur `$34AE` = 10 coups, flag `$80`, son 0x28 ; la barrière suit le joueur, absorbe les contacts (ennemis / tirs ennemis) en décrémentant `$34AE` ; elle disparaît à 0. Aspect : quarts de dôme 32x32 (motif 428) puis 16x16 (431), deux quarts en diagonale par frame, diagonale alternée à chaque frame. Mesuré par poke (`dumps/rb.script`).
-- MD : `player.barrier`, sprites créés à la demande (tuiles partagées entre les deux quarts), `PLAYER_contact` absorbe. Limite du moteur de sprites : 80 objets → `MAX_SPR16` 22→20, orbes d'options créées à la demande, `SPR_disableVDPSpriteChecking()`.
-- Non fait : tir 3 voies/bouclier/vie des objets au sol, décalage ±4 px, boîte 30/22/16 px (la contact utilise la boîte habituelle).
+## Jalon 31 — Boss des stages 3 à 6 (rejeu de sprites) + cloche rouge
+- Boss 1 corrigé (rochers/anneaux), cloche rouge = barrière (10 coups, flag $80, SFX 0x28).
+- Boss 3–6 : rejeu des sprites PCE (`src/bossn.c`), données delta par frame générées par `tools/mkbossN.py` (voir commandes dans `tools/build_all.sh`), `src/bossN_data.h`, `res/bossN_*.png`. Boss 6 en boucle. PV 400 (estimés), hitbox non mesurée.
+- Vérifié à l'émulateur : stages 3, 4, 5 (ver jaune, PAL2 sans vert clair) et 6 (boss final).
+- Reste : intro, objets au sol (ventilo/bouclier/vie), décalage cloche ±4 px, hitbox barrière, jingles mort/game over, stage 6 fin.

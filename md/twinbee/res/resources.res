@@ -27,6 +27,23 @@ SPRITE spr_boss_s "boss_s.png" 4 2 NONE 0
 IMAGE boss_clear "boss_clear.png" BEST ALL
 TILESET boss_rock_tiles "boss_rock.png" NONE NONE
 SPRITE spr_ring "boss_ring.png" 4 4 NONE 0
+SPRITE spr_b3_16x32 "boss3_16x32.png" 2 4 NONE 0
+SPRITE spr_b3_16x64 "boss3_16x64.png" 2 8 NONE 0
+SPRITE spr_b3_32x16 "boss3_32x16.png" 4 2 NONE 0
+SPRITE spr_b3_32x32 "boss3_32x32.png" 4 4 NONE 0
+SPRITE spr_b4_16x16 "boss4_16x16.png" 2 2 NONE 0
+SPRITE spr_b4_16x64 "boss4_16x64.png" 2 8 NONE 0
+SPRITE spr_b4_32x16 "boss4_32x16.png" 4 2 NONE 0
+SPRITE spr_b4_32x32 "boss4_32x32.png" 4 4 NONE 0
+SPRITE spr_b4_32x64 "boss4_32x64.png" 4 8 NONE 0
+SPRITE spr_b5_16x32 "boss5_16x32.png" 2 4 NONE 0
+SPRITE spr_b5_32x16 "boss5_32x16.png" 4 2 NONE 0
+SPRITE spr_b5_32x32 "boss5_32x32.png" 4 4 NONE 0
+SPRITE spr_b6_16x16 "boss6_16x16.png" 2 2 NONE 0
+SPRITE spr_b6_16x32 "boss6_16x32.png" 2 4 NONE 0
+SPRITE spr_b6_16x64 "boss6_16x64.png" 2 8 NONE 0
+SPRITE spr_b6_32x32 "boss6_32x32.png" 4 4 NONE 0
+SPRITE spr_b6_32x64 "boss6_32x64.png" 4 8 NONE 0
 SPRITE spr_bar_big "spr_bar_big.png" 4 4 NONE 0
 SPRITE spr_bar_small "spr_bar_small.png" 2 2 NONE 0
 TILESET stage2_tileset "stage2.png" BEST ALL

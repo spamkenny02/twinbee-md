@@ -4,6 +4,7 @@
 #include "mus.h"
 #include "resources.h"
 #include "boss_rock.h"
+#include "bossn.h"
 #include "stage1_pal.h"
 #include "stage1_data.h"
 #include "stage2_data.h"
@@ -401,7 +402,7 @@ void STAGE_update(void)
     prevCharged[0] = player.chargedLevel; prevCharged[1] = player.chargedX; prevCharged[2] = player.chargedY;
     if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On) { BOSS2_start(); boss2On = TRUE; }
     if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
-    else if ((stageNo >= 3) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
+    else if ((stageNo >= 3) && !BOSSN_available(stageNo) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
     MUS_stageUpdate(stage.frame);
     rockUpdate(stage.frame - ROCK_START);
     stage.frame++;

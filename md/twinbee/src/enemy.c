@@ -63,6 +63,7 @@ static Sprite *sEnemy[MAX_SPR16], *sEx[MAX_EX], *sEn10[MAX_SPR10];
 #define EX_SMALL    7
 #define EX_TOTAL    (EX_SMALL + 24)
 
+#include "bossn.h"
 #include "boss_data.h"
 #include "boss_fx.h"
 #include "stage2_enemies.h"
@@ -77,9 +78,20 @@ static u16 rIdx[MAX_ENEMIES], rT[MAX_ENEMIES], rR[MAX_ENEMIES];
 static u16 rF[MAX_ENEMIES];
 static u8 rL[MAX_ENEMIES];
 static s16 spawn2, spawnB2;
+static bool e2Off, bnOn, bnDone;      // boss des stages 3+ : les ennemis rejoués sont retirés pendant le combat
+
+static void e2Release(void)
+{
+    s16 c, i;
+    for (c = 0; c < 4; c++) for (i = 0; i < E2->pool[c]; i++) if (sE2[c][i] && ((c == 0) || (sE2[c][i] != sE2[0][0]))) { SPR_releaseSprite(sE2[c][i]); sE2[c][i] = NULL; }
+    for (i = 0; i < MAX_ENEMIES; i++) if (KIND[i] >= 32) enemies.on[i] = 0;
+    STAGE_releaseClouds();
+    e2Off = TRUE;
+}
 
 static void e2Draw(void)
 {
+    if (e2Off) return;
     s16 i, k, c, n[4] = {0, 0, 0, 0};
     for (i = 0; i < MAX_ENEMIES; i++)
     {
@@ -207,7 +219,7 @@ void ENEMY_init(void)
     enemies.bossDead = 0;
     spawned = spawnedM = spawnedP = spawnedS = spawned6 = spawnedB = spawned12 = spawned9 = spawned10 = bossSpawned = spawnedG = spawnedE = 0;
     memset(bombOn, 0, sizeof(bombOn));
-    spawn2 = spawnB2 = 0;
+    spawn2 = spawnB2 = 0; e2Off = FALSE; bnOn = FALSE; bnDone = FALSE;
     if (stageNo >= 2)       // les tables du stage 1 ne servent pas : tout est considéré comme déjà apparu
     {
         spawned = STAGE1_NUM_ENEMIES; spawnedM = STAGE1_NUM_MISSILES; spawnedP = STAGE1_NUM_POD7; spawnedS = STAGE1_NUM_SHIP8; spawned6 = STAGE1_NUM_POD6;
@@ -325,9 +337,18 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     const s16 f = frame - ENEMY_LAG;                    // frame de calcul correspondante sur PCE
     bossT = f - BOSS_START_FRAME;
     if ((stageNo == 1) && (bossT >= 0) && !bossReady) bossStart();
+    if (BOSSN_available(stageNo) && !bnDone)
+    {
+        const s16 bt = frame - BOSSN_startFrame(stageNo);
+        if ((bt >= 0) && !bnOn) { e2Release(); BOSSN_start(stageNo); bnOn = TRUE; }
+        if (bnOn && !bossDeathT)
+        {
+            if (!BOSSN_update(bt) || BOSSN_dead()) { BOSSN_stop(); bossDeathT = 1; bnOn = FALSE; bnDone = TRUE; }
+        }
+    }
     if (bossDeathT)
     {
-        if (bossDeathT == 1) STAGE_eraseBoss();
+        if ((bossDeathT == 1) && (stageNo == 1)) STAGE_eraseBoss();
         // mort du boss : le crabe disparaît d'un coup, explosions réparties sur son corps pendant ~130 frames, puis fin de niveau
         if (!(bossDeathT % 6))
         {
@@ -338,6 +359,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
                 const u16 r = random();
                 exTimer[k] = EX_TOTAL; exGroup[k] = NOGROUP;
                 exX[k] = 120 - 60 + (r & 127) - 8; exY[k] = 24 + ((r >> 7) & 63) - 8;
+                if (stageNo >= 3) { s16 bx, by; BOSSN_center(&bx, &by); exX[k] = bx - 40 + (r & 63); exY[k] = by - 40 + ((r >> 6) & 63); }
             }
         }
         if (++bossDeathT > 130) { enemies.bossDead = 1; bossDeathT = 0; bossReady = 3; }
@@ -345,6 +367,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     s16 i;
 
     *bonus = 0;
+    if (contactOn && bnOn && BOSSN_contact(playerObjX, playerObjY)) PLAYER_contact(FALSE, FALSE);
     scrollHist[3] = scrollHist[2]; scrollHist[2] = scrollHist[1]; scrollHist[1] = scrollHist[0]; scrollHist[0] = scrollDelta;
     for (i = 0; i < MAX_EX; i++)
     {
@@ -765,7 +788,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
 
     if (stageNo >= 2)
     {
-        while ((spawn2 < E2->nInst) && (E2->inst[spawn2].t0 <= f))
+        while (!e2Off && (spawn2 < E2->nInst) && (E2->inst[spawn2].t0 <= f))
         {
             const E2Inst* in = &E2->inst[spawn2];
             for (i = 0; i < MAX_ENEMIES; i++)
@@ -975,6 +998,7 @@ s16 enemyShotHW = 8, enemyShotHH = 16;
 bool ENEMY_hitByShot(s16 shotX, s16 shotY)
 {
     s16 i;
+    if (bnOn && BOSSN_hit(shotX + 8, shotY + 8, enemyShotHW, enemyShotHH)) return TRUE;
     for (i = MAX_ENEMIES - 1; i >= 0; i--)          // l'original teste les objets du dernier au premier
     {
         // boîtes de l'original : ennemi 4x5, tir 8x16 (demi-tailles) -> |dx| < 12 et |dy| < 21
@@ -995,6 +1019,7 @@ bool ENEMY_hitByShot(s16 shotX, s16 shotY)
 s16 ENEMY_hitByCharged(s16 cx, s16 cy, s16 hw, s16 hh)
 {
     s16 i, n = 0;
+    if (bnOn && BOSSN_hit(cx, cy, hw, hh)) n++;
     for (i = 0; i < MAX_ENEMIES; i++)
     {
         const s16 dx = cx - enemies.x[i];

@@ -84,6 +84,8 @@ import mkboss
 res += mkboss.build(RES, SRC)
 import mkbossfx
 res += mkbossfx.build(RES, SRC)
+import glob
+for _f in sorted(glob.glob('extract/boss[0-9].res')): res += [l for l in open(_f).read().split('\n') if l.strip()]
 import mkbarrier
 res += mkbarrier.build(RES, SRC)
 res += ['TILESET stage2_tileset "stage2.png" BEST ALL', 'MAP stage2_map "stage2.png" stage2_tileset BEST 0']
