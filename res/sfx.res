@@ -13,3 +13,4 @@ WAV sfx_1F "sfx/s31.wav" XGM2 13300
 WAV sfx_34 "sfx/s52.wav" XGM2 13300
 WAV sfx_35 "sfx/s53.wav" XGM2 13300
 WAV sfx_40 "sfx/s64.wav" XGM2 13300
+WAV sfx_0B "sfx/s11.wav" XGM2 13300

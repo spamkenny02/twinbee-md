@@ -2,6 +2,7 @@
 // (fond en dégradé de CRAM, nuages/étoiles/abeille en sprites : tout est animé image par image).
 #include <genesis.h>
 #include "intro.h"
+#include "mus.h"
 #include "resources.h"
 #include "konami_data.h"
 
@@ -93,7 +94,8 @@ static bool logo(void)
         }
     }
     VDP_clearPlane(BG_A, TRUE); VDP_setVerticalScroll(BG_A, 0);
-    if (waitTo(170, &prev)) return TRUE;                                // PCE : le logo en couleur apparait d'un coup a l'image 170
+    if (waitTo(170, &prev)) return TRUE;
+    SFX_play(SFX_KONAMI);                                           // PCE : jingle de boot (son 0B) lance a l'image 170                                // PCE : le logo en couleur apparait d'un coup a l'image 170
     {   // image 170 : BG de la PCE tel quel (4 palettes), puis rejeu exact des changements de palette (scintillement, fond blanc)
         u16 x, y, f, k = 0;
         VDP_loadTileData(kon_tiles, TILE_USER_INDEX, KON_NT, DMA);

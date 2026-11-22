@@ -37,6 +37,7 @@ void SFX_play(u16 id)
         case SFX_BHIT2:   XGM2_playPCMEx(sfx_35, sizeof(sfx_35), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
         case SFX_BDEAD:   XGM2_playPCMEx(sfx_34, sizeof(sfx_34), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
         case SFX_BXPL:    XGM2_playPCMEx(sfx_40, sizeof(sfx_40), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
+        case SFX_KONAMI:  XGM2_playPCMEx(sfx_0B, sizeof(sfx_0B), SOUND_PCM_CH2, 3, FALSE, FALSE); break;
         case SFX_POWER:   XGM2_playPCMEx(sfx_28, sizeof(sfx_28), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
     }
 }
