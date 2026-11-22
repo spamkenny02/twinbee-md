@@ -1,24 +1,25 @@
 # twinbee-md — Detana!! TwinBee (PC Engine) → Mega Drive (SGDK)
 
-Portage hobbyiste (utilisateur francophone ; échanges, commentaires de code et NOTES en **français**) de *Detana!! TwinBee* (HuCard PCE, 512 Ko, CRC32 5CF59D80) vers Mega Drive, par **réécriture du moteur en C (SGDK)**, vérifiée image par image contre des traces RAM/SAT de l'original. Le son n'est pas commencé.
+Portage hobbyiste (utilisateur francophone ; échanges, commentaires de code et NOTES en **français**) de *Detana!! TwinBee* (HuCard PCE, 512 Ko, CRC32 5CF59D80) vers Mega Drive, par **réécriture du moteur en C (SGDK)**, vérifiée image par image contre des traces RAM/SAT de l'original. Musique et bruitages sont en place (jalons 27-49).
 
-Ce README est le point d'entrée pour reprendre le projet. Le détail chronologique (mesures, adresses, décisions, écarts) est dans **`NOTES.md`** (jalons 1 à 26) : le lire avant de toucher à un sous-système.
+Ce README est le point d'entrée pour reprendre le projet. Le détail chronologique (mesures, adresses, décisions, écarts) est dans **`NOTES.md`** (jalons 1 à 49) : le lire avant de toucher à un sous-système.
 
-## 1. État actuel (jalon 26)
+## 1. État actuel (jalon 49)
 
 | Domaine | État |
 |---|---|
-| Stages 1 à 6 | Jouables : décor défilant (plan B), nuages/cloches, ennemis, tirs ennemis, ennemis au sol, bombe, mort/réapparition, vies, bras (hands) |
-| Stage 1 | Complet : ennemis simulés par routines portées de la ROM (types 3–10), mi-boss (types 11/12), boss crabe (visuel + dynamique approximative) |
-| Stages 2–6 | Décor + nuages + ennemis **rejoués depuis des traces** (pas simulés), tirs ennemis rejoués |
-| Boss stage 2 (galion) | Rejoué (séquence fixe, ne peut pas être détruit, pas d'explosion finale) ; BAT 64×64 + scroll X/Y par frame |
-| Boss stages 3, 4, 5, 6 | **Non faits** : fin de niveau provisoire à `scrollFrames + 300` |
-| Cloches | Cycle de couleurs exact (jalon 25), 7 couleurs rendues |
-| Bonus | Bleue (vitesse +2), noire (vitesse −2), blanche (tir double), verte/violette (options : 3 mini-abeilles suiveuses, **sans collision**), rouge (flag posé, **aucun effet**) |
-| Autres bonus/objets | Non faits : tir en éventail ($08) et bouclier ($10) des objets au sol, vie supplémentaire, objet laissé par les ennemis au sol |
-| Score / points des cloches colorées | Score basique (500 par cloche) ; valeurs réelles non mesurées |
-| Son | Musique FM+PSG+PCM (titre, 6 stages, 3 boss, fin de stage) et 4 bruitages PCM (jalons 27-28) ; manquent perte de vie/game over, bonus, explosion joueur |
-| ROM | ~1,8 Mo ; VRAM et nombre de sprites très tendus (voir §6) |
+| Intro / titre | Logo Konami identique à la PCE (écart 0 px mesuré, jingle XGM2), scène de vol PCE rejouée (abeille, enseigne), titre avec choix 1 / 2 joueurs |
+| Stages 1 à 6 | Jouables : décor défilant, nuages/cloches, ennemis, tirs ennemis, ennemis au sol, bombe (bras avec bombe), mort/réapparition, vies, bras |
+| Stage 1 | Simulation fidèle des ennemis (routines portées de la ROM), mi-boss, boss crabe (dynamique approximative) |
+| Stages 2–6 | Décor + nuages + ennemis **rejoués depuis des traces**, tirs ennemis rejoués |
+| Boss | Boss 2 (galion) rejoué, **indestructible**, sans explosion finale ; boss 3 à 6 rejoués (sprites, `bossN.c`), PV 400 estimés, hitbox non mesurée |
+| Fin du stage 6 | Portée (dialogue, défilement, générique, mer, retour au titre) ; parallaxe du bas non reproduite, musique de la fin non portée |
+| Mode 2 joueurs | WinBee (rouge), HUD 2P, bombes/score/contacts par joueur, collision entre joueurs, ciblage sur le joueur le plus proche ; quelques règles approximatives (voir `NOTES.md` j37-j38) |
+| Bonus | Cloches colorées complètes (bleue, noire, blanche, verte, violette), cloche rouge = barrière (10 coups), options (3 mini-abeilles, sans collision), fruits laissés par les ennemis au sol |
+| Objets au sol | **Non faits** : éventail (`$08`), bouclier (`$10`), vie +1, nettoyage d'ennemis (source/tirage inconnus, jamais vus en jeu) |
+| Son | Musiques refaites depuis les MDX X68000 (FM + PSG, titre, 6 stages, 3 boss, fin de stage), jingle Konami, bruitages PCM (tir, ennemi, cloche, bombe, boss…). Manquent : perte de vie / game over / continue, plusieurs SFX, musique de la fin ; vibrato/LFO non rendus ; rendu **jamais validé à l'oreille** |
+| Score | Basique (500 par cloche) ; points réels des cloches colorées non mesurés |
+| ROM | ~2,5 Mo (compression LZ4 des flux de boss, de la fin, des ennemis rejoués, du boss 2) ; **RAM BSS ~24,1 Ko sur ~25 Ko de marge**, 80 sprites max, VRAM très tendue (voir §6) |
 
 Dernière ROM : `md/twinbee/out/rom.bin` après `tools/build_all.sh` (non versionnée : `.gitignore` exclut `*.bin`, `*.pce`, `dumps/`, `emu/`, `out/`).
 
@@ -73,13 +74,14 @@ Dernière ROM : `md/twinbee/out/rom.bin` après `tools/build_all.sh` (non versio
 
 ## 8. À faire (ordre suggéré)
 
-1. **Cloche rouge** (flag `$80` + objet slot 9, 30×30) et **objets au sol** (éventail `$08`, bouclier `$10`, vie `$87`) : expérience PCE par `poke` (ex. `3438=80` + création manuelle de l'objet slot 9 : `2C97=py`, `2B50=px`, `2F25=01`, `3367=1E`, `33D4=1E`, `34AE=0A`) puis trace de l'objet.
-2. Collision/rôle des options (bloquent-elles les tirs ennemis ? tuent-elles ?), décalage ±4 px de la cloche à chaque tir (anim `$21` → +4, `$22/$23` → −4, bornes 8..E8), points réels des cloches (jaunes enchaînées et colorées), boîte du tir double contre nuages/cloches.
-3. Boss des stages 3 (soleil jaune, ~63226→72259), 4 (violet, ~90633→), 5, 6 (rejeu par trace comme le boss 2) ; HP/destruction réelles des boss.
-4. Score complet / HUD, continues, écran de fin, progression complète depuis le titre (`START_STAGE` est à 1).
-5. Tirs ennemis des ennemis au sol, objet laissé par les ennemis au sol (type 29), explosions au sol.
-6. Son : jingles manquants (ids 0x11 perte de vie, 0x47/0x9D/0xA3 non identifiés), effets restants (voir NOTES j27-j28), mixage fin.
-7. Optimisation : taille ROM (1,8 Mo, limite SGDK/cart 4 Mo), VRAM, limite de 80 sprites.
+1. **Son** : retour utilisateur négatif sur les musiques → les écouter/valider, vibrato/LFO, jingles perte de vie / game over / continue (ids 0x11, 0x47, 0x9D, 0xA3), SFX restants (22/23, 2B, 2C, 32, 33, 36, 3B, 1E, 21, 24, 2D), musique de la fin.
+2. **Objets au sol** (éventail `$08`, bouclier `$10`, vie `$87`, nettoyage `$EE77`) : trouver d'où ils viennent (peut-être hors stage 1 ou événements particuliers), puis expérience PCE par `poke` + trace.
+3. **Boss** : PV et hitbox réels (boss 3 à 6), boss 2 destructible + explosion finale, dynamique du boss 1.
+4. **Cloches** : décalage ±4 px à chaque tir, hitbox de la barrière rouge, points réels (jaunes enchaînées et colorées), collision/rôle des options.
+5. **Mode 2 joueurs** : cible des tirs ennemis à égalité, bonus de groupe, poussée en Y entre joueurs.
+6. **Score / HUD complets**, continues, vérifier la progression complète depuis le titre (`START_STAGE`).
+7. **Fin** : parallaxe du bas (pas de VScroll par ligne sur MD), musique.
+8. **Technique** : surveiller la RAM (BSS ≤ ~25 Ko), la VRAM et les 80 sprites ; ROM ~2,5 Mo (limite 4 Mo).
 
 ## 9. Pièges connus
 
