@@ -325,4 +325,4 @@ def convert(sid, out, maxframes=None, noloop=False):
 if __name__ == '__main__':
     sid = int(sys.argv[1]); out = sys.argv[2] if len(sys.argv) > 2 else f'/home/claude/work/md/twinbee/res/music/s{sid}.vgm'
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    convert(sid, out, noloop=(sid in (11, 17, 71, 145, 157, 163, 77)))
+    convert(sid, out, maxframes=int(os.environ.get('MAXF', 0)) or None, noloop=(sid in (11, 17, 71, 145, 157, 163, 77)))

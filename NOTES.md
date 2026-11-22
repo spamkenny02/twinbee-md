@@ -513,3 +513,4 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - tools/mkkonami.py : logo couleur = tuiles/BAT du BG PCE (4 palettes) + rejeu exact des palettes 170-249 (scintillement, marches blanches) ; trait de balayage (profils 3/5/7/8 lignes relevés, opaque dessous) ; éclat = sprite 48x24 par image (res/intro_spark.png).
 - Pacing en temps réel (vtimer) : images logo 12→490, fondu 490-526.
 - Jingle Konami : son PCE 0B (SFX_KONAMI, res/sfx/s11.wav) lancé à l'image 170 du logo, mesuré dans l'émulateur MD (début ≈ image 172).
+- Jingle Konami refait en piste musique XGM2 (MUS_KONAMI = s11.vgm via tools/mkmusic.py 11, MAXF=140) au lieu d'un PCM 13 kHz (son sale).

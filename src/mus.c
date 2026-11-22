@@ -10,6 +10,7 @@ static const u8 mBossTrack[6] = { MUS_BOSS_A, MUS_BOSS_A, MUS_BOSS_B, MUS_BOSS_B
 
 void MUS_init(void) { XGM2_loadDriver(TRUE); XGM2_load(mus_all); }
 void MUS_play(u16 track) { XGM2_stop(); SYS_doVBlankProcess(); SYS_doVBlankProcess(); XGM2_load(mus_all); XGM2_playTrack(track); }
+void MUS_playNow(u16 track) { XGM2_playTrack(track); }
 void MUS_stop(void) { XGM2_stop(); }
 
 void MUS_stageUpdate(s16 frame)
@@ -37,7 +38,6 @@ void SFX_play(u16 id)
         case SFX_BHIT2:   XGM2_playPCMEx(sfx_35, sizeof(sfx_35), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
         case SFX_BDEAD:   XGM2_playPCMEx(sfx_34, sizeof(sfx_34), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
         case SFX_BXPL:    XGM2_playPCMEx(sfx_40, sizeof(sfx_40), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
-        case SFX_KONAMI:  XGM2_playPCMEx(sfx_0B, sizeof(sfx_0B), SOUND_PCM_CH2, 3, FALSE, FALSE); break;
         case SFX_POWER:   XGM2_playPCMEx(sfx_28, sizeof(sfx_28), SOUND_PCM_CH3, 3, FALSE, FALSE); break;
     }
 }
