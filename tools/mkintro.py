@@ -52,4 +52,4 @@ def build(RES):
             for x, c in enumerate(row):
                 if c == '1': st.putpixel((k * 8 + 1 + x, 1 + y), k + 1)
     st.save(RES + 'intro_star.png')
-    return ['IMAGE intro_%s "intro_%s.png" NONE ALL' % (n, n) for n in ('kout', 'kcol')] + ['SPRITE intro_cloud "intro_cloud.png" 8 4 NONE 0', 'SPRITE intro_bee "intro_bee.png" 4 4 NONE 0', 'SPRITE intro_star "intro_star.png" 1 1 NONE 0']
+    return ['IMAGE intro_%s "intro_%s.png" NONE ALL' % (n, n) for n in ('kout', 'kcol', 'sign')]      + ['SPRITE intro_spark "intro_spark.png" 2 2 NONE 0']      # intro_sign.png : tools/mkintro2.py ; intro_spark.png : éclat du logo (rgba PCE 20/30/40)

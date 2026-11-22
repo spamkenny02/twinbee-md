@@ -20,6 +20,7 @@ typedef struct
     s16 barKind;                    // 0 aucune, 1 grande, 2 petite : les sprites de barrière n'existent que tant qu'elle dure (VRAM sprites très serrée)
     s16 trailX[TRAIL_N], trailY[TRAIL_N];     // historique de la position du joueur (une entrée par frame)
     bool trailOn;
+    s8 bombT[2];            // bras gauche / droit tenant une bombe (image 1, 2 px plus bas) : 8 images après un lancer
     Sprite *sBody, *sArmL, *sArmR, *sShot, *sShot2, *sHalo, *sSide0, *sSide1;
     s16 phaseTimer, deathX, deathY;
     Sprite *sDead0, *sDead;         // explosion du vaisseau
@@ -126,24 +127,28 @@ static bool armShown(s16 bit)
 static void drawShip(u16 joy)
 {
     const s16 x = P.x, y = P.y;
+    const s16 dl = V.bombT[0] ? 2 : 0, dr = V.bombT[1] ? 2 : 0;
 
     // trois sprites 16x16 : corps + deux bras ; le vaisseau s'incline à gauche et à droite
     place(V.sBody, x - 8, y - 8);
     if ((joy & BUTTON_RIGHT) && !(joy & BUTTON_LEFT))
     {
         SPR_setFrame(V.sBody, 1); SPR_setHFlip(V.sBody, FALSE);
-        place(V.sArmL, x - 13, y - 10); place(V.sArmR, x - 4, y - 5);
+        place(V.sArmL, x - 13, y - 10 + dl); place(V.sArmR, x - 4, y - 5 + dr);
     }
     else if ((joy & BUTTON_LEFT) && !(joy & BUTTON_RIGHT))
     {
         SPR_setFrame(V.sBody, 1); SPR_setHFlip(V.sBody, TRUE);
-        place(V.sArmL, x - 12, y - 5); place(V.sArmR, x - 3, y - 10);
+        place(V.sArmL, x - 12, y - 5 + dl); place(V.sArmR, x - 3, y - 10 + dr);
     }
     else
     {
         SPR_setFrame(V.sBody, 0); SPR_setHFlip(V.sBody, FALSE);
-        place(V.sArmL, x - 16, y - 9); place(V.sArmR, x, y - 9);
+        place(V.sArmL, x - 16, y - 9 + dl); place(V.sArmR, x, y - 9 + dr);
     }
+    SPR_setFrame(V.sArmL, V.bombT[0] ? 1 : 0); SPR_setFrame(V.sArmR, V.bombT[1] ? 1 : 0);
+    if (V.bombT[0]) V.bombT[0]--;
+    if (V.bombT[1]) V.bombT[1]--;
     P.armHidden = (armShown(1) ? 0 : 1) | (armShown(2) ? 0 : 2);
     SPR_setVisibility(V.sArmL, armShown(1) ? VISIBLE : HIDDEN);
     SPR_setVisibility(V.sArmR, armShown(2) ? VISIBLE : HIDDEN);
@@ -528,4 +533,11 @@ void PLAYER_collide(void)
             players[i].x = v->fx >> 8; players[i].y = v->fy >> 8;
         }
     }
+}
+
+// lancer de bombe : la main de la voie (0 gauche, 1 droite) montre la bombe pendant 8 images (motif PCE 465, 2 px plus bas)
+void PLAYER_bombArm(s16 n, s16 lane)
+{
+    const s16 keep = playerCur;
+    playerCur = n; V.bombT[lane] = 8; playerCur = keep;
 }

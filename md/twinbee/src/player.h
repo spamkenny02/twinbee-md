@@ -84,6 +84,7 @@ void PLAYER_join(void);                    // entrée du joueur 2
 void PLAYER_collide(void);                 // les deux vaisseaux se repoussent (à appeler après les PLAYER_update)
 void PLAYER_update(s16 n, u16 joy, u16 frame);   // logique d'une frame du joueur n
 void PLAYER_draw(s16 n);
+void PLAYER_bombArm(s16 n, s16 lane);       // la main de la voie (0 gauche, 1 droite) tient la bombe 8 images
 s16 PLAYER_contact(bool armZone, bool enemyLeft);   // armZone : les 3 derniers pixels de la boîte ; enemyLeft : ennemi à gauche du joueur
 void PLAYER_kill(void);                    // contact avec un ennemi (sans effet si invincible ou déjà touché)                    // position des sprites
 

@@ -5,15 +5,21 @@ import sys, collections, numpy as np, hashlib
 sys.path.insert(0, 'tools'); import pcegfx, pcesprites, pcetrace
 from PIL import Image
 T0 = 125700
-SC = [('a', 126340, 128780), ('b', 128780, 133380), ('c', 133380, 136040)]
+SC = [('a', 126340, 128780), ('b', 128780, 133380), ('c', 133380, 136040), ('i', 530, 1745)]
 def rgb3(c): return np.array([((c >> 3) & 7), ((c >> 6) & 7), (c & 7)]) * 36
 fr, k_, sat, ram = pcetrace.load('dumps/end6b/en.trace')
+fri, k_i, sati, rami = pcetrace.load('dumps/intro/in.trace')      # intro : dumps toutes les 2 frames (530-1178) puis toutes les frames
 dumpcache = {}
-def dump(F):
-    d = min(max(125800, (F + 10) // 20 * 20), 136040)
-    if d not in dumpcache:
-        v, s, p, r = pcegfx.load('dumps/end6b/w%d' % d); dumpcache[d] = (v, p, pcegfx.spr16(v))
-    return dumpcache[d]
+def dump(F, intro=False):
+    if intro:
+        d = F if F >= 1180 else (F + 1) // 2 * 2
+        d = min(max(300, d), 1744)
+        key = ('i', d); path = 'dumps/intro/v%04d' % d
+    else:
+        d = min(max(125800, (F + 10) // 20 * 20), 136040); key = d; path = 'dumps/end6b/w%d' % d
+    if key not in dumpcache:
+        v, s, p, r = pcegfx.load(path); dumpcache[key] = (v, p, pcegfx.spr16(v))
+    return dumpcache[key]
 def spr(v, p, s16, pat, w, h, pl):
     base = pat
     if w == 32: base &= ~1
@@ -28,9 +34,11 @@ infos = []
 for name, f0, f1 in SC:
     frames = []; ims = {}; cols = collections.Counter(); use = collections.Counter()
     for F in range(f0, f1):
-        v, p, s16 = dump(F); L = []
-        for (x, y, pat, pl, hf, w, h, i) in pcetrace.sprites(sat[F - T0]):
-            vf = bool(sat[F - T0][i][3] & 0x8000)
+        INTRO = (name == 'i')
+        v, p, s16 = dump(F, INTRO); L = []
+        SATF = sati[F - fri[0]] if INTRO else sat[F - T0]
+        for (x, y, pat, pl, hf, w, h, i) in pcetrace.sprites(SATF):
+            vf = bool(SATF[i][3] & 0x8000)
             if x <= -w or x >= 256 or y <= -h - 12 or y >= 224 + 12: continue          # hors écran
             im = spr(v, p, s16, pat, w, h, pl)
             if (im >= 0).sum() == 0: continue
@@ -41,7 +49,7 @@ for name, f0, f1 in SC:
         frames.append(L)
     for key, im in ims.items():
         for c in im[im >= 0].ravel(): cols[int(c)] += 1
-    NG = 2 if name == 'a' else 1
+    NG = 2 if name in 'ai' else 1
     def kmeans(pts, wts, k, it=40, init=None):
         if init is None:
             cen = [pts[int(np.argmax(wts))]]

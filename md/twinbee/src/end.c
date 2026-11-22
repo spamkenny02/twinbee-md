@@ -8,14 +8,17 @@
 #include "resources.h"
 #include "end_spr.h"
 #include "end_sprd.h"
+#include "intro.h"
+#include "intro_data.h"
 
 // sprites rejoués (flux de tools/mkendspr.py : n, masque, pièces ; forme inchangée = dx, dy)
-typedef struct { u8 ncls; u16 frames; s32 start; u8 ng; const u8* cpal; const u16* colors; const u8* classMax; const u8* flux; const SpriteDefinition* defs[8]; } SprInfo;
-static const u8 cpalA[] = ENDS_A_CPAL, cpalB[] = ENDS_B_CPAL, cpalC[] = ENDS_C_CPAL;
-static const SprInfo sinfo[3] = {
+typedef struct { u8 ncls; u16 frames; s32 start; u8 ng; const u8* cpal; const u16* colors; const u8* classMax; const u8* flux; const SpriteDefinition* defs[12]; } SprInfo;
+static const u8 cpalA[] = ENDS_A_CPAL, cpalB[] = ENDS_B_CPAL, cpalC[] = ENDS_C_CPAL, cpalI[] = ENDS_I_CPAL;
+static const SprInfo sinfo[4] = {
     { ENDS_A_NCLASS, ENDS_A_FRAMES, ENDS_A_START, ENDS_A_NG, cpalA, ends_a_colors, ends_a_classMax, ends_a_flux, ENDS_A_DEFS },
     { ENDS_B_NCLASS, ENDS_B_FRAMES, ENDS_B_START, ENDS_B_NG, cpalB, ends_b_colors, ends_b_classMax, ends_b_flux, ENDS_B_DEFS },
     { ENDS_C_NCLASS, ENDS_C_FRAMES, ENDS_C_START, ENDS_C_NG, cpalC, ends_c_colors, ends_c_classMax, ends_c_flux, ENDS_C_DEFS },
+    { ENDS_I_NCLASS, ENDS_I_FRAMES, ENDS_I_START, ENDS_I_NG, cpalI, ends_i_colors, ends_i_classMax, ends_i_flux, ENDS_I_DEFS },
 };
 typedef struct { u8 cls, flip; u16 frame; s16 x, y; } EP;
 static EP ecur[64];
@@ -24,8 +27,8 @@ static u8 ecurN;
 static s32 elast;
 static const SprInfo* SI;
 extern u16 bat[4096];   // partage la RAM du BAT du boss 2 (jamais simultanés)
-#define edep ((s16 (*)[48]) (bat))
-#define esp ((Sprite* (*)[48]) (bat + 384))
+#define edep ((s16 (*)[48]) (bat))                 // 12 classes x 48 x 2 o = 1152 o
+#define esp ((Sprite* (*)[48]) (bat + 576))
 
 static void sprStart(const SprInfo* si)
 {
@@ -72,7 +75,7 @@ static void sprFrame(void)
 
 static void sprUpdate(s32 f)
 {
-    u16 n[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    u16 n[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     u16 c, k;
     s32 t = f - SI->start;
     if (!SI || (t < 0) || (t >= (s32) SI->frames)) return;
@@ -239,4 +242,45 @@ void ENDING_run(void)
     VDP_setPlaneSize(64, 32, TRUE);
     VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
     VDP_setHorizontalScroll(BG_B, 0); VDP_setVerticalScroll(BG_B, 0);
+}
+
+// intro de la PCE rejouée : sprites (étoiles, nuages, abeille qui tourne) depuis la trace, fond = entrée 0 de la palette (jour -> nuit -> jour),
+// enseigne du titre en BG qui descend (défilement vertical mesuré). Retourne TRUE si START l'a abrégée. Données : tools/mkintro2.py
+bool INTRO_replay(void)
+{
+    u16 prev = JOY_readJoypad(JOY_1), bi = 0, yi = 0, curY = 0xFFFF;
+    s32 f;
+    u32 t0;
+    bool skipped = FALSE;
+    SPR_reset(); SPR_update();
+    VDP_setPlaneSize(64, 64, TRUE);
+    VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE);
+    VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
+    VDP_setHorizontalScroll(BG_B, 0); VDP_setVerticalScroll(BG_B, 140);
+    PAL_setColors(0, palette_black, 64, CPU);
+    VDP_loadTileSet(intro_sign.tileset, TILE_USER_INDEX, CPU);
+    VDP_setTileMapEx(BG_B, intro_sign.tilemap, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 4, 3, 0, 0, 24, 12, CPU);
+    PAL_setColors(0, intro_sign_pal, 32, CPU);
+    PAL_setColor(0, 0);
+    sprStart(&sinfo[3]);
+    MUS_play(MUS_TITLE); titleMusicOn = TRUE;
+    SYS_doVBlankProcess();
+    t0 = vtimer;
+    while ((f = (s32) (vtimer - t0)) < INTRO_NF)
+    {
+        const u16 joy = JOY_readJoypad(JOY_1);
+        if ((joy & BUTTON_START) && !(prev & BUTTON_START)) { skipped = TRUE; break; }
+        prev = joy;
+        while ((bi < INTRO_NBG) && (intro_bgt[bi][0] <= f)) PAL_setColor(0, intro_bgt[bi++][1]);
+        while ((yi < INTRO_NBY) && (intro_byt[yi][0] <= f)) curY = intro_byt[yi++][1];
+        VDP_setVerticalScroll(BG_B, (curY == 0xFFFF) ? 140 : (curY + 12));
+        sprUpdate(INTRO_F0 + f);
+        SPR_update();
+        SYS_doVBlankProcess();
+    }
+    sprStop(); SPR_update();
+    VDP_setPlaneSize(64, 32, TRUE);
+    VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
+    VDP_setVerticalScroll(BG_B, 0);
+    return skipped;
 }

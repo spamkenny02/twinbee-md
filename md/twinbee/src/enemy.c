@@ -395,7 +395,7 @@ void ENEMY_bombPress(s16 px, s16 py, s16 owner)
         if (dx < bestDx) { bestDx = dx; best = i; }
     }
     if (best >= 0) cx = enemies.x[best];
-    SFX_play(SFX_BOMB);
+    SFX_play(SFX_BOMB); PLAYER_bombArm(owner, b - owner * 2);
     bombOn[b] = 1; bombT[b] = 0; bombTarget[b] = best; bombLandY[b] = ly; bombKillIn[b] = 0;
     bombX[b] = cx + ((b & 1) ? 12 : -12);
     bombFy[b] = (s32) (py - 5) << 8;

@@ -13,3 +13,12 @@ SPRITE spr_end_c_16x16_0 "end_c_16x16_0.png" 2 2 NONE 0
 SPRITE spr_end_c_16x32_0 "end_c_16x32_0.png" 2 4 NONE 0
 SPRITE spr_end_c_32x16_0 "end_c_32x16_0.png" 4 2 NONE 0
 SPRITE spr_end_c_32x32_0 "end_c_32x32_0.png" 4 4 NONE 0
+SPRITE spr_end_i_16x16_0 "end_i_16x16_0.png" 2 2 NONE 0
+SPRITE spr_end_i_16x16_1 "end_i_16x16_1.png" 2 2 NONE 0
+SPRITE spr_end_i_16x32_0 "end_i_16x32_0.png" 2 4 NONE 0
+SPRITE spr_end_i_16x32_1 "end_i_16x32_1.png" 2 4 NONE 0
+SPRITE spr_end_i_16x64_0 "end_i_16x64_0.png" 2 8 NONE 0
+SPRITE spr_end_i_32x16_1 "end_i_32x16_1.png" 4 2 NONE 0
+SPRITE spr_end_i_32x32_0 "end_i_32x32_0.png" 4 4 NONE 0
+SPRITE spr_end_i_32x32_1 "end_i_32x32_1.png" 4 4 NONE 0
+SPRITE spr_end_i_32x64_0 "end_i_32x64_0.png" 4 8 NONE 0
