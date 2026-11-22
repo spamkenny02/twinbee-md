@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
-"""Icône du bonus « vie » (16x16, palette HUD ligne 3) : capsule or avec « 1UP » (dessin MD, graphisme PCE non récupéré)."""
-from PIL import Image, ImageDraw
+"""Fruits laissés par les ennemis au sol (type 29 sous-type 0) : pêche (motif PCE 422, pal 7) et pomme (419, pal 4),
+dumps/it1/m5700 et m10560, réduits sur la palette sprite PAL2 (spr_body.png)."""
+import sys, numpy as np
+sys.path.insert(0, 'tools')
+import pcegfx, pcesprites
+from PIL import Image
+def rgb(c): return np.array([((c >> 3) & 7) * 36, ((c >> 6) & 7) * 36, (c & 7) * 36])
 def build(RES):
-    hud = Image.open(RES + 'hud.png').getpalette()
-    im = Image.new('P', (16, 16), 0); im.putpalette(hud)
-    d = ImageDraw.Draw(im)
-    d.rounded_rectangle((0, 3, 15, 12), 3, fill=2); d.rounded_rectangle((1, 4, 14, 11), 2, fill=3)
-    glyph = {'1': ['010', '110', '010', '010', '111'], 'U': ['101', '101', '101', '101', '111'], 'P': ['111', '101', '111', '100', '100']}
-    x = 2
-    for ch in '1UP':
-        for r, row in enumerate(glyph[ch]):
-            for c, v in enumerate(row):
-                if v == '1': im.putpixel((x + c, 5 + r), 1)
-        x += 4
-    im.save(RES + 'spr_item.png')
+    pp = Image.open(RES + 'spr_body.png').getpalette()
+    pal2 = np.array([pp[i * 3:i * 3 + 3] for i in range(16)])
+    out = Image.new('P', (32, 16), 0); out.putpalette(pp)
+    for k, (dump, pat, pl) in enumerate((('dumps/it1/m5700', 422, 7), ('dumps/it1/m10560', 419, 4))):
+        vram, sat, pal, reg = pcegfx.load(dump)
+        s = pcesprites.sprite(vram, pal, pat, 16, 16, pl)
+        for y in range(16):
+            for x in range(16):
+                if s[y, x] < 0: continue
+                d = ((pal2[1:15] - rgb(int(s[y, x]))) ** 2).sum(1)
+                out.putpixel((k * 16 + x, y), int(d.argmin()) + 1)
+    out.save(RES + 'spr_item.png')
     return ['SPRITE spr_item "spr_item.png" 2 2 NONE 0']

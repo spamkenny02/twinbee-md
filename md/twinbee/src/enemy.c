@@ -23,8 +23,8 @@ static s16 spawnedG, scrollHist[4];
 // bombes (bouton I de l'original) : 2 emplacements (voies gauche / droite), viseur automatique sur l'ennemi au sol le plus proche
 static s16 bombHitX[NUM_BOMBS], bombHitY[NUM_BOMBS], bombOn[NUM_BOMBS], bombX[NUM_BOMBS], bombT[NUM_BOMBS], bombTarget[NUM_BOMBS], bombLandY[NUM_BOMBS], bombKillIn[NUM_BOMBS];
 static s32 bombFy[NUM_BOMBS];
-static s16 itemOn, itemX, itemY0, itemT, groundKills;   // bonus vie (voir itemDrop)
-static Sprite* sItem;
+static s16 itemOn[2], itemX[2], itemY0[2], itemT[2], itemKind[2], groundKills;   // fruits (voir itemDrop)
+static Sprite* sItem[2];
 static const u8 gwalkTab[5] = {0x60, 0, 0x80, 1, 0};     // marcheurs (type 15) : $4FD0 = durée, marche
 static s16 spawnedE;     // indice dans la table des tirs ennemis génériques
 static s16 spawned, spawnedM, spawnedP, spawnedS, spawned6, spawnedB, spawned12, spawned9, spawned10, bossSpawned;
@@ -221,7 +221,7 @@ void ENEMY_init(void)
     enemies.bossDead = 0;
     spawned = spawnedM = spawnedP = spawnedS = spawned6 = spawnedB = spawned12 = spawned9 = spawned10 = bossSpawned = spawnedG = spawnedE = 0;
     memset(bombOn, 0, sizeof(bombOn));
-    itemOn = 0; groundKills = 0; sItem = NULL;
+    memset(itemOn, 0, sizeof(itemOn)); memset(sItem, 0, sizeof(sItem)); groundKills = 0;
     spawn2 = spawnB2 = 0; e2Off = FALSE; bnOn = FALSE; bnDone = FALSE;
     if (stageNo >= 2)       // les tables du stage 1 ne servent pas : tout est considéré comme déjà apparu
     {
@@ -275,28 +275,35 @@ static void contact(s16 i, s16 f, s16 playerObjX, s16 playerObjY, u16* bonus)
 }
 
 
-// bonus « vie » laissé par un ennemi au sol détruit à la bombe (type 29 de l'original, sous-type 4, ROM $AEF4) :
-// chute de 1/3 px par frame, ramassé au contact (+1 vie, SFX), disparaît sous l'écran. Chute/ramassage mesurés sur bb4 ;
-// règle de tirage (ici 1 ennemi au sol sur 4) et icône NON récupérées.
+// fruits laissés par les ennemis au sol détruits à la bombe (type 29 sous-type 0 de l'original : 2 emplacements, 96 et 97) :
+// apparaissent à la position de l'ennemi, tombent de 1/3 px par frame, disparaissent vers y = 166 (mesuré sur bb4 et it1/it2, 5 objets) ;
+// ramassés : SFX seul, aucun point ni effet observé (score inchangé). Alternance pêche / pomme (motifs 422/419) : choix MD.
 static void itemDrop(s16 x, s16 y)
 {
-    if (itemOn || (((groundKills++) & 3) != 0)) return;
-    itemOn = 1; itemX = x; itemY0 = y; itemT = 0;
+    s16 k;
+    for (k = 0; k < 2; k++) if (!itemOn[k]) break;
+    if (k == 2) return;
+    itemOn[k] = 1; itemX[k] = x; itemY0[k] = y; itemT[k] = 0; itemKind[k] = (groundKills++) & 1;
 }
 static void itemUpdate(s16 px, s16 py)
 {
-    if (!itemOn) { if (sItem) { SPR_releaseSprite(sItem); sItem = NULL; } return; }
-    itemT++;
+    s16 k;
+    for (k = 0; k < 2; k++)
     {
-        const s16 y = itemY0 + itemT / 3;
-        s16 dx = px - itemX, dy = py - y;
-        if (dx < 0) dx = -dx;
-        if (dy < 0) dy = -dy;
-        if ((dx < 12) && (dy < 12)) { if (player.lives < 99) player.lives++; SFX_play(SFX_POWER); itemOn = 0; }
-        else if (y > 230) itemOn = 0;
-        if (!itemOn) { if (sItem) { SPR_releaseSprite(sItem); sItem = NULL; } return; }
-        if (!sItem) sItem = SPR_addSpriteSafe(&spr_item, 0, -64, TILE_ATTR(PAL3, FALSE, FALSE, FALSE));
-        if (sItem) SPR_setPosition(sItem, itemX - 8 + PF_XOFF, y - 8);
+        s16 y;
+        if (!itemOn[k]) { if (sItem[k]) { SPR_releaseSprite(sItem[k]); sItem[k] = NULL; } continue; }
+        itemT[k]++;
+        y = itemY0[k] + itemT[k] / 3;
+        {
+            s16 dx = px - itemX[k], dy = py - y;
+            if (dx < 0) dx = -dx;
+            if (dy < 0) dy = -dy;
+            if ((dx < 12) && (dy < 12)) { SFX_play(SFX_BELLGET); itemOn[k] = 0; }
+            else if (y > 166) itemOn[k] = 0;
+        }
+        if (!itemOn[k]) { if (sItem[k]) { SPR_releaseSprite(sItem[k]); sItem[k] = NULL; } continue; }
+        if (!sItem[k]) { sItem[k] = SPR_addSpriteSafe(&spr_item, 0, -64, TILE_ATTR(PAL2, FALSE, FALSE, FALSE)); if (sItem[k]) SPR_setFrame(sItem[k], itemKind[k]); }
+        if (sItem[k]) SPR_setPosition(sItem[k], itemX[k] - 8 + PF_XOFF, y - 8);
     }
 }
 
