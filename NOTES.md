@@ -429,3 +429,8 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Rochers des murs : tuiles plan A + scroll vertical (`rockUpdate`, stage.c), trajectoire `rock_y[]` extraite des traces.
 - Les tuiles de rocher sont placées à `TILE_SPRITE_INDEX - 32` (sous la zone sprites) : l'ancien emplacement écrasait la VRAM sprites.
 - Reste : bonus (cloche rouge, objets sol), boss 3–6, intro.
+
+## Jalon 30 — Cloche rouge (barrière)
+- PCE (bank $17 `$B204`) : ramassage = minuteur `$34AE` = 10 coups, flag `$80`, son 0x28 ; la barrière suit le joueur, absorbe les contacts (ennemis / tirs ennemis) en décrémentant `$34AE` ; elle disparaît à 0. Aspect : quarts de dôme 32x32 (motif 428) puis 16x16 (431), deux quarts en diagonale par frame, diagonale alternée à chaque frame. Mesuré par poke (`dumps/rb.script`).
+- MD : `player.barrier`, sprites créés à la demande (tuiles partagées entre les deux quarts), `PLAYER_contact` absorbe. Limite du moteur de sprites : 80 objets → `MAX_SPR16` 22→20, orbes d'options créées à la demande, `SPR_disableVDPSpriteChecking()`.
+- Non fait : tir 3 voies/bouclier/vie des objets au sol, décalage ±4 px, boîte 30/22/16 px (la contact utilise la boîte habituelle).

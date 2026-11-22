@@ -16,7 +16,7 @@ u16 gameFrame;                            // compteur de frames de jeu (lu par l
 static void start(void)
 {
     SPR_end();
-    SPR_initEx((stageNo >= 2) ? 640 : 696);        // VRAM sprites : le décor du stage 2 est plus gros (735 tuiles)
+    SPR_initEx((stageNo >= 2) ? 640 : 696); SPR_disableVDPSpriteChecking();        // VRAM sprites : le décor du stage 2 est plus gros (735 tuiles)
     SPR_reset();
     STAGE_init();
     SYS_doVBlankProcess();
@@ -30,7 +30,7 @@ int main(bool hard)
 
     VDP_setScreenWidth256();
     VDP_setPlaneSize(64, 32, TRUE);
-    SPR_initEx(696);
+    SPR_initEx(696); SPR_disableVDPSpriteChecking();
     MUS_init();
     TITLE_run();
     stageNo = START_STAGE;

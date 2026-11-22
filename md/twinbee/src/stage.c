@@ -325,7 +325,7 @@ void STAGE_update(void)
                 case 2: if (player.speedLvl > 0) player.speedLvl -= 2; break;
                 case 3: player.flags = (player.flags & ~0x08) | PW_TWIN; break;
                 case 4: player.flags |= PW_OPT1; break;
-                case 5: player.flags |= PW_BARRIER; break;
+                case 5: player.flags |= PW_BARRIER; player.barrier = 10; SFX_play(SFX_POWER); break;
                 case 6: player.flags |= PW_OPT2; break;
             }
             spawnPopup(stage.bellX[i] - 8, stage.bellY[i] - 2);

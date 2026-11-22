@@ -63,6 +63,7 @@ typedef struct
     s16 armTimer;           // minuteur de clignotement ($387A), ARM_BLINK_FRAMES puis -1 par frame
     s16 speedLvl;           // niveau de vitesse ($3954) : 4 au départ, +2 par cloche bleue (max 18), -2 par cloche noire ; vitesse = 0x80 + niveau * 0x40 (table $C91D)
     s16 flags;              // bonus ($3438) : voir PW_*
+    s16 barrier;            // barrière de la cloche rouge ($34AE) : coups restants (10 au ramassage)
     s16 shotTw, shot2Tw;    // le tir en vol est un tir double (sprite et boîte de collision plus larges)
     s16 armHidden;          // bras non dessinés cette frame (bit 0 gauche, bit 1 droit) : sert à la vérification
 } PlayerState;

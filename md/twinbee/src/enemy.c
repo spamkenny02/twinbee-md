@@ -55,7 +55,7 @@ static Sprite *sEn4[MAX_MISSILE_SPR];
 #define MAX_EX      6           // explosions simultanées (réserve de sprites limitée par la VRAM)
 static s16 exTimer[MAX_EX], exX[MAX_EX], exY[MAX_EX];
 static u8 exGroup[MAX_EX];
-#define MAX_SPR16   22          // sprites 16x16 partagés par les ennemis de types 3, 5 et 7 (limite de 80 sprites au total)
+#define MAX_SPR16   20          // sprites 16x16 partagés par les ennemis de types 3, 5 et 7 (limite de 80 sprites au total)
 #define MAX_SPR10   12          // sprites 32x16 des vaisseaux de type 10
 static s16 maxSpr16 = MAX_SPR16;
 static Sprite *sEnemy[MAX_SPR16], *sEx[MAX_EX], *sEn10[MAX_SPR10];

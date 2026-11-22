@@ -10,7 +10,8 @@ static s16 shotTimer;               // délai avant apparition du tir normal (0 
 static s16 chargedTimer, chargedPending, shotPending;
 static s16 pendX, pendY, pendCX, pendCY;     // position du joueur au moment de l'appui / du relâchement
 
-static Sprite *sOrb[3];
+static Sprite *sOrb[3], *sBarB[2], *sBarS[2];
+static s16 barKind;                  // 0 aucune, 1 grande, 2 petite : les sprites de barrière n'existent que tant qu'elle dure (VRAM sprites très serrée)
 #define TRAIL_N 24
 static s16 trailX[TRAIL_N], trailY[TRAIL_N];     // historique de la position du joueur (une entrée par frame)
 static bool trailOn;
@@ -23,6 +24,7 @@ static Sprite *sC1L, *sC1R, *sC2L, *sC2M, *sC2R, *sC2T;
 static Sprite* add(const SpriteDefinition* def, u16 pal, u16 depth)
 {
     Sprite* s = SPR_addSprite(def, 0, -64, TILE_ATTR(pal, FALSE, FALSE, FALSE));
+    if (!s) return NULL;
     SPR_setDepth(s, depth);
     SPR_setVisibility(s, HIDDEN);
     return s;
@@ -38,7 +40,8 @@ void PLAYER_init(void)
     sBody = add(&spr_body, PAL2, 1);
     sArmL = add(&spr_arm, PAL2, 2);
     sArmR = add(&spr_arm, PAL2, 2);
-    { s16 i; for (i = 0; i < 3; i++) { sOrb[i] = add(&spr_orb, PAL2, 2); SPR_setVisibility(sOrb[i], HIDDEN); } }
+    { s16 i; for (i = 0; i < 3; i++) sOrb[i] = NULL; }       // créés à la demande : le moteur de sprites est limité à 80 objets
+    sBarB[0] = sBarB[1] = sBarS[0] = sBarS[1] = NULL; barKind = 0;
     sHalo = add(&spr_halo, PAL2, 0);
     sShot = add(&spr_shot, PAL3, 3);
     sShot2 = add(&spr_shot, PAL3, 3);
@@ -246,6 +249,12 @@ static u16 lastJoy;
 s16 PLAYER_contact(bool armZone, bool enemyLeft)
 {
     if (player.phase || player.inv) return CONTACT_NONE;
+    if (player.barrier > 0)         // la barrière absorbe le coup (10 coups, boîte réduite à partir de 4)
+    {
+        if (--player.barrier == 0) player.flags &= ~PW_BARRIER;
+        SFX_play(SFX_BELLHIT);
+        return CONTACT_ARM;
+    }
     if (!armZone) { PLAYER_kill(); return CONTACT_BODY; }
     // zone de bras : AF67 teste le bras gauche (ennemi à gauche), sinon AF84 le bras droit
     {
@@ -297,7 +306,7 @@ void PLAYER_update(u16 joy, u16 frame)
                 if (--player.lives <= 0) player.gameOver = TRUE;
                 player.phase = 2; phaseTimer = 0;
                 player.armLost = 0; player.armBlink = 0; player.armTimer = 0;
-                player.speedLvl = PLAYER_SPEED_LVL0; player.flags = 0; trailOn = FALSE;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
+                player.speedLvl = PLAYER_SPEED_LVL0; player.flags = 0; player.barrier = 0; trailOn = FALSE;      // les bonus sont perdus à la mort (mesuré : $3954 et $3438 remis à zéro)
                 player.x = PLAYER_START_X; player.y = RESPAWN_Y;
                 player.inv = RESPAWN_INV;
             }
@@ -368,10 +377,52 @@ void PLAYER_draw(void)
     {
         s16 i;
         const bool show = trailOn && (player.phase == 0) && !blink;
+        const bool have = trailOn;
         for (i = 0; i < 3; i++)
         {
+            if (have && !sOrb[i]) sOrb[i] = add(&spr_orb, PAL2, 2);
+            if (!have && sOrb[i]) { SPR_releaseSprite(sOrb[i]); sOrb[i] = NULL; }
+            if (!sOrb[i]) continue;
             SPR_setVisibility(sOrb[i], show ? VISIBLE : HIDDEN);
             if (show) place(sOrb[i], trailX[7 + 8 * i] - 8, trailY[7 + 8 * i] - 12);
+        }
+    }
+    {   // barrière : deux quarts de dôme en diagonale, une diagonale sur deux (scintillement de 1 frame comme sur PCE)
+        const bool on = (player.barrier > 0) && (player.phase == 0);
+        const s16 want = (player.barrier <= 0) ? 0 : ((player.barrier >= 4) ? 1 : 2);
+        const s16 d = (want == 1) ? 32 : 16;
+        const bool alt = lastFrame & 1;
+        s16 i;
+        if (want != barKind)
+        {
+            for (i = 0; i < 2; i++)
+            {
+                if (sBarB[i]) { SPR_releaseSprite(sBarB[i]); sBarB[i] = NULL; }
+                if (sBarS[i]) { SPR_releaseSprite(sBarS[i]); sBarS[i] = NULL; }
+            }
+            if (want)
+            {   // le second sprite partage les tuiles du premier (même image, seul le retournement change)
+                const SpriteDefinition* def = (want == 1) ? &spr_bar_big : &spr_bar_small;
+                Sprite* a = SPR_addSpriteSafe(def, 0, -64, TILE_ATTR(PAL3, FALSE, FALSE, FALSE));
+                Sprite* b = NULL;
+                if (a)
+                {
+                    b = SPR_addSpriteEx(def, 0, -64, TILE_ATTR_FULL(PAL3, FALSE, FALSE, FALSE, a->attribut & TILE_INDEX_MASK), SPR_FLAG_AUTO_VISIBILITY);
+                    if (b) { SPR_setDepth(a, 1); SPR_setDepth(b, 1); }
+                }
+                if (want == 1) { sBarB[0] = a; sBarB[1] = b; } else { sBarS[0] = a; sBarS[1] = b; }
+            }
+            barKind = want;
+        }
+        for (i = 0; i < 2; i++)
+        {
+            Sprite* sp = (want == 1) ? sBarB[i] : sBarS[i];
+            const bool right = (i == 0) ? alt : !alt;       // diagonale haut-gauche / bas-droit, puis haut-droit / bas-gauche
+            const bool low = (i == 1);
+            if (!sp) continue;
+            SPR_setVisibility(sp, on ? VISIBLE : HIDDEN);
+            SPR_setHFlip(sp, right); SPR_setVFlip(sp, low);
+            place(sp, player.x + (right ? 0 : -d), player.y + (low ? 0 : -d));
         }
     }
     drawShots(lastFrame);
