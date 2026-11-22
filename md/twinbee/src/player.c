@@ -44,9 +44,9 @@ static void place(Sprite* s, s16 x, s16 y)
 
 static void createSprites(void)
 {
-    V.sBody = add(&spr_body, PAL2, 1);
-    V.sArmL = add(&spr_arm, PAL2, 2);
-    V.sArmR = add(&spr_arm, PAL2, 2);
+    V.sBody = add(playerCur ? &spr_body2 : &spr_body, PAL2, 1);
+    V.sArmL = add(playerCur ? &spr_arm2 : &spr_arm, PAL2, 2);
+    V.sArmR = add(playerCur ? &spr_arm2 : &spr_arm, PAL2, 2);
     { s16 i; for (i = 0; i < 3; i++) V.sOrb[i] = NULL; }       // créés à la demande : le moteur de sprites est limité à 80 objets
     V.sBarB[0] = V.sBarB[1] = V.sBarS[0] = V.sBarS[1] = NULL; V.barKind = 0;
     V.sHalo = add(&spr_halo, PAL2, 0);
@@ -409,7 +409,7 @@ void PLAYER_draw(s16 n)
         const bool have = V.trailOn;
         for (i = 0; i < 3; i++)
         {
-            if (have && !V.sOrb[i]) V.sOrb[i] = add(&spr_orb, PAL2, 2);
+            if (have && !V.sOrb[i]) V.sOrb[i] = add(playerCur ? &spr_orb2 : &spr_orb, PAL2, 2);
             if (!have && V.sOrb[i]) { SPR_releaseSprite(V.sOrb[i]); V.sOrb[i] = NULL; }
             if (!V.sOrb[i]) continue;
             SPR_setVisibility(V.sOrb[i], show ? VISIBLE : HIDDEN);

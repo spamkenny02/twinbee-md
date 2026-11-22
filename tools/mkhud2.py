@@ -22,4 +22,12 @@ def build(RES):
                 best = min(range(1, 15), key=lambda k: sum((pal[k][i] - q[i]) ** 2 for i in range(3)))
                 out[y, x] = best
     im = Image.fromarray(out, 'P'); im.putpalette(p); im.save(RES + 'hud2.png')
-    return ['IMAGE hud2_image "hud2.png" NONE ALL']
+    # WinBee : mêmes sprites que TwinBee, bleus remplacés par les rouges déjà présents dans la palette sprites (pas de ligne de palette libre)
+    MAP = {2: 1, 3: 7, 5: 4, 6: 4, 9: 8}
+    lines = ['IMAGE hud2_image "hud2.png" NONE ALL']
+    for n, w, h in (('spr_body', 2, 2), ('spr_arm', 2, 2), ('spr_orb', 2, 2)):
+        im = Image.open(RES + n + '.png'); a = np.array(im)
+        b = np.vectorize(lambda v: MAP.get(int(v), int(v)))(a).astype(np.uint8)
+        o = Image.fromarray(b, 'P'); o.putpalette(im.getpalette()); o.save(RES + n + '2.png')
+        lines.append('SPRITE %s2 "%s2.png" %d %d NONE 0' % (n, n, w, h))
+    return lines

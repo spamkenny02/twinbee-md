@@ -467,3 +467,6 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Ciblage** : le virage des ennemis de type 5 se déclenche sur le joueur le plus proche en x (vague arrivant par la droite, P1 en 64 / P2 en 160 : trajectoire identique à la RAM PCE avec x cible = 160, écart 0 sur 14 trajectoires ; avec P1 en 225 / P2 en 16 la meilleure cible est 225). Implémenté pour toutes les visées (`nearP`, `TX`/`TY` dans enemy.c).
 - **Collision entre joueurs** : les deux vaisseaux se repoussent, distance minimale 16 px sur au moins un axe. P1 qui pousse P2 de face avance à demi-vitesse et déplace P2 d'autant ; en montant en diagonale, P1 chasse P2 de 4 px vers le bas. `PLAYER_collide` rend la poussée en x à ±3 px et ne reproduit pas la poussée en y (P2 reste en 159 au lieu de 163).
 - Reste non vérifié : cible des tirs d'ennemis quand les deux joueurs sont à égalité, bonus de groupe, couleur de WinBee.
+
+## Jalon 39 — WinBee en rouge
+- Pas de ligne de palette libre pour un vrai rose : le joueur 2 utilise des sprites `spr_body2/arm2/orb2` (générés par `tools/mkhud2.py`) dont les bleus sont remplacés par les rouges/bruns déjà présents dans PAL2 (indices 2→1, 3→7, 5/6→4, 9→8). Le cœur du HUD 2P est bien rose.
