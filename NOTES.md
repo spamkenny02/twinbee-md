@@ -491,3 +491,7 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Piège RAM : la limite pratique est ≈ 25 Ko de BSS (au-delà, le heap SGDK ne suffit plus : fond du stage 2 corrompu, `ILLEGAL INSTRUCTION` dans le dépaquetage LZ4W au stage 4). BSS actuel 23,9 Ko.
 - `e2Off` initialisé à TRUE (l'ennemi n'est ni mis à jour ni dessiné avant ENEMY_init).
 - ROM : 2 883 584 → 2 621 440 octets. Non compressé : boss 2 (≈100 Ko), tables de scroll des stages, tilesets/sprites (PNG rescomp).
+
+## Jalon 45 — compression du boss 2
+- `tools/b2pack.py` (appelé par build_all.sh, idempotent) fusionne les 6 tableaux (keyFrame/dStart/dIdx/dVal/scrollX/scrollY) en un flux séquentiel LZ4 (blocs de 256 o), lu par `boss2.c` (tampon propre de 256 o, `RA_unz` exporté de ra.c).
+- RAM : `edep`/`esp` de end.c partagent désormais `bat` (boss2.c) — jamais utilisés en même temps. BSS ≈ 24,1 Ko. ROM 2,62 -> 2,49 Mo.

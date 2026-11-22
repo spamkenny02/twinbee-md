@@ -1,7 +1,7 @@
 #include "ra.h"
 u8 raWork[RA_WORK_SIZE];
 
-static void unz(const u8* s, const u8* se, u8* d)
+void RA_unz(const u8* s, const u8* se, u8* d)
 {
     for (;;)
     {
@@ -22,5 +22,5 @@ static void unz(const u8* s, const u8* se, u8* d)
 void RA_block(const RAArr* a, u16 b, u8* dst)
 {
     if ((u32) b * RA_BLKSZ >= a->len) { u16 i; for (i = 0; i < RA_BLKSZ; i++) dst[i] = 0; return; }       // au-delà de la fin (trajectoire finie) : zéros
-    unz(a->z + a->o[b], a->z + a->o[b + 1], dst);
+    RA_unz(a->z + a->o[b], a->z + a->o[b + 1], dst);
 }

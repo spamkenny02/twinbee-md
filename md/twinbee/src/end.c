@@ -22,9 +22,10 @@ static EP ecur[64];
 static u8 ecurN;
 #define erd lzs_rd
 static s32 elast;
-static Sprite* esp[8][48];
 static const SprInfo* SI;
-static s16 edep[8][48];
+extern u16 bat[4096];   // partage la RAM du BAT du boss 2 (jamais simultanés)
+#define edep ((s16 (*)[48]) (bat))
+#define esp ((Sprite* (*)[48]) (bat + 384))
 
 static void sprStart(const SprInfo* si)
 {
