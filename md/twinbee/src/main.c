@@ -6,6 +6,7 @@
 #include "stage.h"
 #include "title.h"
 #include "intro.h"
+#include "end.h"
 #include "mus.h"
 
 u16 gameFrame;
@@ -76,6 +77,9 @@ int main(bool hard)
     MUS_init();
     INTRO_run();
     TITLE_run();
+#ifdef DBG_ENDING
+    ENDING_run();
+#endif
     stageNo = START_STAGE;
     start();
 
@@ -145,6 +149,13 @@ int main(bool hard)
         else if ((joy & ~prevJoy & BUTTON_START) && (stageClearTimer == 0)) start();
         else if (stageClearTimer > 0)
         {
+            if ((stageNo == 6) && (stageClearTimer == 150))      // fin du jeu : séquence de fin, puis retour au titre
+            {
+                MUS_stop(); ENDING_run(); SPR_reset();
+                credits = 3; stageClearTimer = 0;
+                TITLE_run(); stageNo = START_STAGE; start(); prevJoy = JOY_readJoypad(JOY_1);
+                continue;
+            }
             if (stageClearTimer == 1) MUS_play(MUS_CLEAR);
             if (stageClearTimer < 1000) stageClearTimer++;
             if (stageClearTimer == 150)

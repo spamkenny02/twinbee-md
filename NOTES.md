@@ -474,3 +474,9 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 ## Jalon 41 — fin du stage 6 (recherche PCE, `dumps/end6.script`, captures `dumps/end6/v*`)
 - Rejeu autofire jusqu'à 150000 : le boss 6 (cerveau) meurt vers PCE ~126100. Suite relevée : fondu noir → panorama qui défile (île et arbre, puis château doré, puis ciel) avec cadre doré + portrait de la princesse et texte japonais (« ありがとう ツインビー… », 3 lignes qui changent) vers 126600–128500 ; ciel avec les 3 héros (rose, bleu, vert) qui volent, staff roll (PRODUCER K. KITAUE, PROGRAMER ASUTY.S IGA, SPECIAL THANKS…) ~129900–134000 ; étoiles ; mer + arc-en-ciel, 3 caractères jaunes, « © 1992 KONAMI / ALL RIGHTS RESERVED. » ~135000–140000 ; puis la partie recommence au stage 1 (score conservé, 3 vies).
 - Durée totale ≈ 15000 frames (~4 min). Pas encore porté (texte japonais, panorama haut, portrait, staff roll à reconstituer).
+
+## Jalon 42 — fin du stage 6 (portage de l'ending)
+- `tools/mkend.py`/`endbg.py` (fonds a/b/c en tuiles + palettes animées), `tools/mkendspr.py` (flux de sprites rejoués, k-means++ pour garder les couleurs rares), `src/end.c` (lecture temps réel calée sur `vtimer`).
+- Scène de dialogue : le scroll n'est PAS par ligne en Y mais un split horizontal (BXR 0 au-dessus de la ligne `splitRow`, 256 en dessous) → HSCROLL_LINE ; BYR 256 puis 250→180 à 0,25 px/frame. Entre 127480 et 127780 le bas défile plus vite (parallaxe) : non reproduit (MD n'a pas de VScroll par ligne).
+- Priorité des sprites = ordre SAT via `SPR_setDepth` (sinon les yeux de la princesse étaient masqués).
+- Connus : couleurs du ciel de la scène a ratées (ids de couleurs figés à l'étape médiane), sprite parasite à ~128300, musique de la fin non portée. Retour au titre à la fin (la PCE relance le stage 1).

@@ -59,4 +59,4 @@ def main():
           % (K, [len(p) for p in pals], backdrop, err_tiles, len(tiles), 100 * err_tiles / len(tiles), err_px, H * W, 100 * err_px / (H * W)))
     return pals
 
-main()
+if __name__ == "__main__": main()
