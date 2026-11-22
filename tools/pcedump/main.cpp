@@ -23,6 +23,7 @@ int main(int argc,char**argv){
     if(!strcmp(cmd,"keys2")){e.type=14; e.keys=(int)strtol(arg,NULL,16);} else if(!strcmp(cmd,"keys")){e.type=0; e.keys=(int)strtol(arg,NULL,16);}
     else if(!strcmp(cmd,"dump")) e.type=1;
     else if(!strcmp(cmd,"end")){e.type=2; endf=fr;}
+    else if(!strcmp(cmd,"unpoke")){e.type=15; unsigned a; sscanf(arg,"%x",&a); e.keys=(int)(a<<8);}
     else if(!strcmp(cmd,"poke")){e.type=3; unsigned a,v; sscanf(arg,"%x=%x",&a,&v); e.keys=(int)((a<<8)|v);}
     else if(!strcmp(cmd,"watch")){e.type=6; unsigned a,b=0,n; if(strchr(arg,'-')) sscanf(arg,"%x-%x:%u",&a,&b,&n); else sscanf(arg,"%x:%u",&a,&n); e.keys=(int)(a|(b<<16)); e.name=std::to_string(n);}   // pas à pas : journal des écritures RAM à <adr> pendant <n> instructions
     else if(!strcmp(cmd,"trace")) e.type=4;      // début de trace SAT+RAM par frame dans <nom>.trace
@@ -53,7 +54,7 @@ int main(int argc,char**argv){
       HuC6280::HuC6280_State* st=core->GetHuC6280()->GetState(); u8* w=core->GetMemory()->GetWorkingRAM();
       u16 ret=(u16)(st->PC->GetValue()-1); u8 sp=st->S->GetValue();
       w[0x100+sp]=(u8)(ret>>8); sp--; w[0x100+sp]=(u8)ret; sp--; st->S->SetValue(sp); st->A->SetValue((u8)evs[i].keys); st->PC->SetValue(0xE3FC); }
-    for(size_t i=0;i<evs.size();i++) if(evs[i].type==3 && evs[i].frame<=f) core->GetMemory()->GetWorkingRAM()[(evs[i].keys>>8)&0x1FFF]=(u8)evs[i].keys; // poke persistant en RAM
+    for(size_t i=0;i<evs.size();i++) if(evs[i].type==3 && evs[i].frame<=f){ bool off=false; for(size_t j=0;j<evs.size();j++) if(evs[j].type==15 && evs[j].frame<=f && evs[j].frame>=evs[i].frame && ((evs[j].keys>>8)&0x1FFF)==((evs[i].keys>>8)&0x1FFF)) off=true; if(!off) core->GetMemory()->GetWorkingRAM()[(evs[i].keys>>8)&0x1FFF]=(u8)evs[i].keys; } // poke persistant en RAM
     for(size_t i=0;i<evs.size();i++) if(evs[i].frame==f && evs[i].type==6){
       GeargrafxCore::GG_Debug_Run st; memset(&st,0,sizeof st); st.step_debugger=true;
       u8* w=core->GetMemory()->GetWorkingRAM(); int ad=evs[i].keys&0x1FFF; int hi=((evs[i].keys>>16)&0x1FFF); long n=atol(evs[i].name.c_str());
