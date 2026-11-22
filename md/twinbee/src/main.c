@@ -65,6 +65,8 @@ static void start(void)
     gameFrame = 0;
 }
 
+static bool wantP2;
+
 int main(bool hard)
 {
     u16 prevJoy = 0, prevJoy2 = 0;
@@ -76,7 +78,7 @@ int main(bool hard)
     SPR_initEx(696); SPR_disableVDPSpriteChecking();
     MUS_init();
     INTRO_run();
-    TITLE_run();
+    wantP2 = TITLE_run();
 #ifdef DBG_ENDING
     ENDING_run();
 #endif
@@ -92,6 +94,7 @@ int main(bool hard)
         if (gameFrame == DBG_GAMEOVER_AT) { players[0].gameOver = TRUE; players[1].gameOver = TRUE; }
 #endif
         // le joueur 2 entre avec START sur la manette 2 (RUN sur PC Engine), pas pendant l'écran de fin de niveau
+        if (wantP2 && !players[1].active && (stageClearTimer == 0) && (gameFrame > 2)) { wantP2 = FALSE; PLAYER_join(); STAGE_join(); }
         if (!players[1].active && (joy2 & ~prevJoy2 & BUTTON_START) && (stageClearTimer == 0)) { PLAYER_join(); STAGE_join(); }
         if (players[0].gameOver && (!players[1].active || players[1].gameOver))                // plus de vie : Continue, puis GAME OVER
         {
@@ -131,7 +134,7 @@ int main(bool hard)
                 VDP_clearTextArea(0, 12, 32, 1);
                 gameOverScreen();
                 credits = 3; contCount = -1;
-                TITLE_run();
+                wantP2 = TITLE_run();
                 stageNo = START_STAGE;
                 start();
                 prevJoy = JOY_readJoypad(JOY_1);
@@ -153,7 +156,7 @@ int main(bool hard)
             {
                 MUS_stop(); ENDING_run(); SPR_reset();
                 credits = 3; stageClearTimer = 0;
-                TITLE_run(); stageNo = START_STAGE; start(); prevJoy = JOY_readJoypad(JOY_1);
+                wantP2 = TITLE_run(); stageNo = START_STAGE; start(); prevJoy = JOY_readJoypad(JOY_1);
                 continue;
             }
             if (stageClearTimer == 1) MUS_play(MUS_CLEAR);
@@ -166,7 +169,7 @@ int main(bool hard)
             }
             if ((stageClearTimer > 150) && (joy & ~prevJoy & BUTTON_START))
             {
-                if (stageNo < 6) stageNo++; else { SPR_reset(); TITLE_run(); stageNo = START_STAGE; }
+                if (stageNo < 6) stageNo++; else { SPR_reset(); wantP2 = TITLE_run(); stageNo = START_STAGE; }
                 start(); prevJoy = JOY_readJoypad(JOY_1);
                 continue;
             }

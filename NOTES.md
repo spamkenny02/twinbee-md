@@ -495,3 +495,6 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 ## Jalon 45 — compression du boss 2
 - `tools/b2pack.py` (appelé par build_all.sh, idempotent) fusionne les 6 tableaux (keyFrame/dStart/dIdx/dVal/scrollX/scrollY) en un flux séquentiel LZ4 (blocs de 256 o), lu par `boss2.c` (tampon propre de 256 o, `RA_unz` exporté de ra.c).
 - RAM : `edep`/`esp` de end.c partagent désormais `bat` (boss2.c) — jamais utilisés en même temps. BSS ≈ 24,1 Ko. ROM 2,62 -> 2,49 Mo.
+
+## Jalon 46 — choix 1 / 2 joueurs au titre
+- Menu « 1 PLAYER / 2 PLAYERS » (haut/bas, l'entrée choisie clignote ; START valide ; START de la manette 2 = 2 joueurs direct). `TITLE_run()` renvoie TRUE pour 2 joueurs ; main.c appelle PLAYER_join/STAGE_join dès la 3e frame du stage. START manette 2 en jeu fonctionne toujours.
