@@ -441,3 +441,12 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Les 4 autres sous-types de la routine ROM (banque $17 `$AE44`) : 1 efface les objets ($AE77), 2 `$3438 |= $08` + SFX $28 ($AEDC, éventail), 3 `$A0 |= $10` ($AF07, bouclier), 4 vie +1 BCD max 99 + SFX $23 ($AEF4). Jamais vus en jeu : source/tirage inconnus (peut-être les mêmes objets hors stage 1, ou issus d'autres événements).
 - MD : `itemDrop/itemUpdate` (enemy.c), 2 emplacements, fruits alternés pêche/pomme (`spr_item`, `tools/mkitem.py` depuis les dumps it1), ramassage |dx|,|dy| < 12 (estimé), SFX cloche. Vérifié à l'émulateur (affichage et chute).
 
+
+## Jalon 35 — Musique refaite depuis les MDX X68000
+- Retour utilisateur : musique « horrible » (rendu des captures PSG PCE en FM additif). L'utilisateur a fourni `DTWNB*.MDX` (version X68000, séquences MXDRV d'origine avec vraies voix OPM) → `extract/mdx/`. Le zip « TG-16 » reçu était une page anti-bot, inutilisable.
+- `tools/mdx.py` : lecteur MXDRV (voix 27 octets, commandes FF..E8 ; LFO = 1 ou 5 octets). Validé : les 8 pistes FM d'un morceau totalisent exactement le même nombre de clocks. Volume : arg ≥ 0x80 = atténuation (arg−0x80), < 0x10 = table VOLTAB. Clock = 1024×(256−T)/4 MHz.
+- `tools/mkmdx.py <n° MDX> <vgm>` : pistes 0-5 → FM YM2612 (voix OPM recopiées telles quelles, même format de registres ; TL des porteuses + atténuation + `MTL`), pistes 6-7 → PSG carré, piste ADPCM (PDX absent) → percussions PSG par heuristique (0/2 grosse caisse, 1/10/11 caisse claire, 9 cymbale, 3-8 toms, reste charleston). DAC coupé (batterie PCM PCE supprimée). Ties (F7) fusionnés ; boucle = cible du F1. Vibrato/LFO, portamento, detune non rendus.
+- Note MDX → MIDI : +15 (calé sur les captures PCE ; corrélation de chroma 0,92 sur le titre rendu).
+- Correspondance PCE → MDX : 83 titre→10, 91 stage 1→00, 98→01, 103→02, 108→03, 113→04, 123→06, 128 boss A→11, 135 boss B→12, 140 boss 6→13, 145 fin de stage→07 (sans boucle). Stages 3-6 et boss A choisis d'après titres et durées.
+- Ancienne chaîne (captures PSG, `tools/mkmusic.py`, jalon 27 et réglages du 35 précédent) conservée.
+- Non vérifié à l'oreille.
