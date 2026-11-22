@@ -479,4 +479,4 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - `tools/mkend.py`/`endbg.py` (fonds a/b/c en tuiles + palettes animées), `tools/mkendspr.py` (flux de sprites rejoués, k-means++ pour garder les couleurs rares), `src/end.c` (lecture temps réel calée sur `vtimer`).
 - Scène de dialogue : le scroll n'est PAS par ligne en Y mais un split horizontal (BXR 0 au-dessus de la ligne `splitRow`, 256 en dessous) → HSCROLL_LINE ; BYR 256 puis 250→180 à 0,25 px/frame. Entre 127480 et 127780 le bas défile plus vite (parallaxe) : non reproduit (MD n'a pas de VScroll par ligne).
 - Priorité des sprites = ordre SAT via `SPR_setDepth` (sinon les yeux de la princesse étaient masqués).
-- Connus : couleurs du ciel de la scène a ratées (ids de couleurs figés à l'étape médiane), sprite parasite à ~128300, musique de la fin non portée. Retour au titre à la fin (la PCE relance le stage 1).
+- Couleurs : ids clés sur 2 étapes (126800 + médiane) et fusion pondérée par rareté (corrige le ciel violet). Connus : sprite parasite à ~128300, musique de la fin non portée. Retour au titre à la fin (la PCE relance le stage 1).

@@ -31,12 +31,13 @@ for name, maps, f0, f1, K in SCENES:
                 if key not in tiles: tiles[key] = len(tlist); tlist.append((t, pl))
                 tmap[ty, tx] = tiles[key]
         tmaps.append(tmap)
-    KS = len(steps) // 2 if name == 'a' else len(steps) - 1
+    KSS = [23, len(steps) // 2] if name == 'a' else [len(steps) - 1]
+    def KY(t): return tuple(t[q] for q in KSS)
     merged = {}          # couleur finale -> couleur finale représentante (fusion des couleurs proches si le tassement échoue)
     def run(merged):
         ids = {}; idlist = []
         def tid(e):
-            t = tl(e); k = merged.get(t[KS], t[KS])
+            t = tl(e); k = merged.get(KY(t), KY(t))
             if k not in ids: ids[k] = len(idlist); idlist.append(t)
             return ids[k]
         px = [np.array([tid(pl * 16 + int(i)) for i in t.ravel()]) for t, pl in tlist]
@@ -51,11 +52,17 @@ for name, maps, f0, f1, K in SCENES:
     while True:
         lost, ps, assign, ids, idlist, px, sets, sidx, back = run(merged)
         if lost == 0: break
-        cur = sorted(set(merged.get(t[KS], t[KS]) for t in (tl(pl * 16 + int(i)) for t, pl in tlist for i in set(t.ravel().tolist()))))
+        cur = sorted(set(merged.get(KY(t), KY(t)) for t in (tl(pl * 16 + int(i)) for t, pl in tlist for i in set(t.ravel().tolist()))))
+        use = collections.Counter()
+        for k_, (t_, pl_) in enumerate(tlist):
+            nuse = sum(int((m_ == k_).sum()) for m_ in tmaps)
+            for i_ in t_.ravel().tolist():
+                kk_ = KY(tl(pl_ * 16 + int(i_))); use[merged.get(kk_, kk_)] += nuse
         best = None
         for i in range(len(cur)):
             for j in range(i + 1, len(cur)):
-                d = int(((rgb3(cur[i]) - rgb3(cur[j])) ** 2).sum())
+                d = sum(int(((rgb3(a_) - rgb3(b_)) ** 2).sum()) for a_, b_ in zip(cur[i], cur[j]))
+                d = (d + 1) * min(use[cur[i]], use[cur[j]])      # fusionne d'abord les couleurs proches ET rares
                 if best is None or d < best[0]: best = (d, cur[i], cur[j])
         merged = {k: (best[1] if v == best[2] else v) for k, v in merged.items()}; merged[best[2]] = best[1]
     ps = [sorted(x) for x in ps]
