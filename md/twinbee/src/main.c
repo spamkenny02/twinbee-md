@@ -81,6 +81,7 @@ int main(bool hard)
         {
             PLAYER_update(0, prevJoy, gameFrame);     // l'original applique les commandes avec une frame de retard
             if (players[1].active) PLAYER_update(1, prevJoy2, gameFrame);
+            PLAYER_collide();
             STAGE_update();
             gameFrame++;
         }

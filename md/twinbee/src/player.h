@@ -77,6 +77,7 @@ extern s16 playerCur;            // joueur visé par PLAYER_contact / PLAYER_kil
 
 void PLAYER_init(void);
 void PLAYER_join(void);                    // entrée du joueur 2
+void PLAYER_collide(void);                 // les deux vaisseaux se repoussent (à appeler après les PLAYER_update)
 void PLAYER_update(s16 n, u16 joy, u16 frame);   // logique d'une frame du joueur n
 void PLAYER_draw(s16 n);
 s16 PLAYER_contact(bool armZone, bool enemyLeft);   // armZone : les 3 derniers pixels de la boîte ; enemyLeft : ennemi à gauche du joueur

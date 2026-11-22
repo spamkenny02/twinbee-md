@@ -257,6 +257,20 @@ static void kill(s16 i)
     if (group[i] != NOGROUP) groupKills[group[i]]++;
 }
 
+
+// cible des ennemis : joueur présent le plus proche en x (relevé sur la trace PCE à 2 joueurs : le virage se déclenche sur le plus proche)
+static s16 nearP(s16 ex)
+{
+    s16 best = 0;
+    if (enemyPlayer[1].on && (players[1].phase != 3))
+    {
+        if (!enemyPlayer[0].on || (players[0].phase == 3) || (abs(enemyPlayer[1].x - ex) < abs(enemyPlayer[0].x - ex))) best = 1;
+    }
+    return best;
+}
+#define TX(ex) (enemyPlayer[nearP(ex)].x)
+#define TY(ex) (enemyPlayer[nearP(ex)].y)
+
 // contact ennemi -> joueur (voir enemy.h) ; renvoie rien, détruit l'ennemi et crédite les points si le contact a un effet
 static void contact(s16 i, s16 f, s16 playerObjX, s16 playerObjY, u16* bonus)
 {
@@ -420,8 +434,6 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
     *bonus = 0;
     {   // 2 joueurs : les ennemis visent le joueur en vie le plus proche (règle d'origine non vérifiée)
         s16 pn;
-        if (enemyPlayer[1].on && (players[1].phase == 0) && (!enemyPlayer[0].on || (players[0].phase != 0)))
-        { playerObjX = enemyPlayer[1].x; playerObjY = enemyPlayer[1].y; }       // le joueur 1 est touché ou éliminé : tous visent le joueur 2
         itemUpdate();
         if (contactOn && bnOn)
             for (pn = 0; pn < 2; pn++)
@@ -602,7 +614,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
                 if (j < MAX_AIR)
                 {
                     const s16 ox = 119, oy = boss_ay[bt] + 43;
-                    const s16 a = aim(ox, oy, playerObjX, playerObjY) & 31;
+                    const s16 a = aim(ox, oy, TX(ox), TY(ox)) & 31;
                     enemies.on[j] = 3; state[j] = 2; KIND[j] = 16; arcFrames[j] = 0; group[j] = NOGROUP; angle[j] = 99;
                     vx[j] = (ebul_vel[a][0] * 234) / 319; vy[j] = (ebul_vel[a][1] * 234) / 319;
                     fx[j] = ox * 256; fy[j] = oy * 256; enemies.x[j] = ox; enemies.y[j] = oy;
@@ -611,7 +623,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             if ((bossT >= 507) && (((bossT - 507) % 80) == 0))
             {
                 const s16 ox = (((bossT - 507) / 80) & 1) ? 167 : 73, oy = boss_ay[bt] + 63;
-                s16 q, a0 = aim(ox, oy, playerObjX, playerObjY) & 31;
+                s16 q, a0 = aim(ox, oy, TX(ox), TY(ox)) & 31;
                 for (q = -2; q <= 2; q += 2)
                 {
                     s16 j;
@@ -649,7 +661,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
                 }
                 if ((enemies.y[i] & 0xFF) >= 0xD0)
                 {
-                    const s16 a = aim(enemies.x[i], enemies.y[i], playerObjX, playerObjY) & 31;
+                    const s16 a = aim(enemies.x[i], enemies.y[i], TX(enemies.x[i]), TY(enemies.x[i])) & 31;
                     state[i] = 4; vx[i] = ship9_vel64[a][0]; vy[i] = ship9_vel64[a][1];
                 }
                 timer[i]--;
@@ -702,7 +714,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             if (state[i] == 1)
             {
                 const s16 t = (enemies.y[i] & 0xFF) + 0x60, hi = ((enemies.y[i] >> 8) + (t >> 8)) & 0xFF;
-                if ((hi != 0) || ((playerObjY & 0xFF) < (t & 0xFF))) { state[i] = 2; cnt[i] = 3; }
+                if ((hi != 0) || ((TY(enemies.x[i]) & 0xFF) < (t & 0xFF))) { state[i] = 2; cnt[i] = 3; }
             }
             else if (state[i] == 2)
             {
@@ -733,7 +745,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             case 1:
                 {
                     const s16 y6 = (s16) ((enemies.y[i] + 0x50) & 0xFF);
-                    if ((y6 >= 0xCE) || ((playerObjY & 0xFF) < y6))
+                    if ((y6 >= 0xCE) || ((TY(enemies.x[i]) & 0xFF) < y6))
                     {
                         ay[i] = -0x10; ax[i] = (flags[i] & 1) ? -0x12 : 0x12; cnt[i] = 0x18; state[i] = 2; arcFrames[i] = 0;
                     }
@@ -777,7 +789,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
         if (state[i] == 1)
         {
             // approche en ligne droite jusqu'à passer à moins de 32 px (en x) du joueur
-            s16 dx = playerObjX - (s16) (fx[i] >> 8);
+            s16 dx = TX((s16) (fx[i] >> 8)) - (s16) (fx[i] >> 8);
             if (dx < 0) dx = -dx;
             if (dx < ENEMY_TRIGGER_DX) { state[i] = 2; timer[i] = 0; arcFrames[i] = 0; }
         }
@@ -836,7 +848,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
         const MissileSpawn* e = &stage1_missiles[spawnedM++];
         for (i = 0; i < MAX_AIR; i++)
         {
-            const s16 a = aim(e->x, -32, playerObjX, playerObjY) & 31;
+            const s16 a = aim(e->x, -32, TX(e->x), TY(e->x)) & 31;
             if (enemies.on[i]) continue;
             enemies.on[i] = 1; state[i] = 1; KIND[i] = e->kind; angle[i] = a; arcFrames[i] = 0; group[i] = NOGROUP;
             vx[i] = missile_vel[a][0]; vy[i] = missile_vel[a][1];
@@ -868,12 +880,12 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             {
                 if ((enemies.on[k] != 1) || (KIND[k] < 32)) continue;
                 if ((abs(enemies.x[k] - e->x) > 3) || (abs(enemies.y[k] - e->y) > 3)) continue;
-                if ((abs(playerObjX - enemies.x[k]) < 0x30) && (abs(playerObjY - enemies.y[k]) < 0x28)) break;
+                if ((abs(TX(enemies.x[k]) - enemies.x[k]) < 0x30) && (abs(TY(enemies.x[k]) - enemies.y[k]) < 0x28)) break;
                 for (j = 0; j < MAX_AIR; j++) if (!enemies.on[j]) break;
                 if (j == MAX_AIR) for (j = 0; j < MAX_ENEMIES; j++) if (!enemies.on[j]) break;
                 if (j == MAX_ENEMIES) break;
                 {
-                    const s16 a = (aim(enemies.x[k], enemies.y[k], playerObjX, playerObjY) + (random() & 3) - 1) & 31;
+                    const s16 a = (aim(enemies.x[k], enemies.y[k], TX(enemies.x[k]), TY(enemies.x[k])) + (random() & 3) - 1) & 31;
                     enemies.on[j] = 3; state[j] = 2; KIND[j] = 12; arcFrames[j] = 0; group[j] = NOGROUP; angle[j] = 99;
                     vx[j] = ebul_vel[a][0]; vy[j] = ebul_vel[a][1];
                     fx[j] = enemies.x[k] * 256; fy[j] = enemies.y[k] * 256;
@@ -895,11 +907,11 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             const s16 kd = KIND[k];
             if ((enemies.on[k] != 1) || (kd == 12) || (kd >= 11)) continue;
             if ((abs(enemies.x[k] - e->x) > 3) || (abs(enemies.y[k] - e->y) > 3)) continue;
-            if ((abs(playerObjX - enemies.x[k]) < 0x30) && (abs(playerObjY - enemies.y[k]) < 0x28)) break;
+            if ((abs(TX(enemies.x[k]) - enemies.x[k]) < 0x30) && (abs(TY(enemies.x[k]) - enemies.y[k]) < 0x28)) break;
             for (j = 0; j < MAX_AIR; j++) if (!enemies.on[j]) break;
             if (j == MAX_AIR) break;
             {
-                const s16 a = (aim(enemies.x[k], enemies.y[k], playerObjX, playerObjY) + (random() & 3) - 1) & 31;
+                const s16 a = (aim(enemies.x[k], enemies.y[k], TX(enemies.x[k]), TY(enemies.x[k])) + (random() & 3) - 1) & 31;
                 enemies.on[j] = 3; state[j] = 2; KIND[j] = 12; arcFrames[j] = 0; group[j] = NOGROUP; angle[j] = 99;
                 vx[j] = ebul_vel[a][0]; vy[j] = ebul_vel[a][1];
                 fx[j] = enemies.x[k] * 256; fy[j] = enemies.y[k] * 256;
@@ -1039,7 +1051,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             if (e->flags & 1)
             {
                 // part en visant le joueur, angle borné du côté de l'écran
-                a = aim(ex, 0, playerObjX, playerObjY);
+                a = aim(ex, 0, TX(ex), TY(ex));
                 if (e->flags & 2) { if (a >= 0x11) a = 0x10; }
                 else if (a >= 8) a = 0;
             }

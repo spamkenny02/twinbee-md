@@ -462,3 +462,8 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Mort** : chaque joueur a ses vies ; à 0 vie avec l'autre en jeu, le vaisseau disparaît (phase 3) ; retour au titre quand les deux sont éliminés.
 - **Approximations (non vérifiées sur trace)** : les ennemis visent le joueur 1, ou le joueur 2 si le 1 est touché/éliminé (l'original a peut-être une autre règle) ; la couleur des cloches tient compte des bonus des deux joueurs ; le bonus de groupe est crédité au joueur 1 ; **WinBee a les mêmes couleurs que TwinBee** (palette sprites PAL2 pleine, PAL1 utilisée par le décor du stage 1).
 - Outils : `mdshot` accepte `keys2 <masque>` (manette 2) ; `mdtest_stage.py` appuie deux fois sur START (intro puis titre).
+
+## Jalon 38 — Règles 2P relevées sur trace (`dumps/tw2`, `tw3`, `tw4`)
+- **Ciblage** : le virage des ennemis de type 5 se déclenche sur le joueur le plus proche en x (vague arrivant par la droite, P1 en 64 / P2 en 160 : trajectoire identique à la RAM PCE avec x cible = 160, écart 0 sur 14 trajectoires ; avec P1 en 225 / P2 en 16 la meilleure cible est 225). Implémenté pour toutes les visées (`nearP`, `TX`/`TY` dans enemy.c).
+- **Collision entre joueurs** : les deux vaisseaux se repoussent, distance minimale 16 px sur au moins un axe. P1 qui pousse P2 de face avance à demi-vitesse et déplace P2 d'autant ; en montant en diagonale, P1 chasse P2 de 4 px vers le bas. `PLAYER_collide` rend la poussée en x à ±3 px et ne reproduit pas la poussée en y (P2 reste en 159 au lieu de 163).
+- Reste non vérifié : cible des tirs d'ennemis quand les deux joueurs sont à égalité, bonus de groupe, couleur de WinBee.

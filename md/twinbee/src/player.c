@@ -456,3 +456,40 @@ void PLAYER_draw(s16 n)
     }
     drawShots(lastFrame);
 }
+
+// Les deux vaisseaux ne peuvent pas se superposer : relevé sur la trace PCE (P1 pousse P2 vers la droite à demi-vitesse, puis P2 est chassé en y
+// quand P1 monte), distance minimale 16 px sur au moins un axe. Résolution symétrique le long de l'axe le moins pénétré.
+void PLAYER_collide(void)
+{
+    s32 dx, dy, ax, ay;
+    Priv* a = &pv[0];
+    Priv* b = &pv[1];
+    if (!players[0].active || !players[1].active || players[0].phase || players[1].phase) return;
+    dx = b->fx - a->fx; dy = b->fy - a->fy;
+    ax = (dx < 0) ? -dx : dx; ay = (dy < 0) ? -dy : dy;
+    if ((ax >= (16L << 8)) || (ay >= (16L << 8))) return;
+    if ((16L << 8) - ax <= (16L << 8) - ay)
+    {
+        const s32 h = ((16L << 8) - ax) / 2 + 1;
+        const s32 s = (dx < 0) ? -1 : 1;           // sens de b par rapport à a
+        a->fx -= s * h; b->fx += s * h;
+    }
+    else
+    {
+        const s32 h = ((16L << 8) - ay) / 2 + 1;
+        const s32 s = (dy < 0) ? -1 : 1;
+        a->fy -= s * h; b->fy += s * h;
+    }
+    {
+        s16 i;
+        for (i = 0; i < 2; i++)
+        {
+            Priv* v = &pv[i];
+            if (v->fx < ((s32) PLAYER_MIN_X << 8)) v->fx = (s32) PLAYER_MIN_X << 8;
+            if (v->fx > ((s32) PLAYER_MAX_X << 8)) v->fx = (s32) PLAYER_MAX_X << 8;
+            if (v->fy < ((s32) PLAYER_MIN_Y << 8)) v->fy = (s32) PLAYER_MIN_Y << 8;
+            if (v->fy > ((s32) PLAYER_MAX_Y << 8)) v->fy = (s32) PLAYER_MAX_Y << 8;
+            players[i].x = v->fx >> 8; players[i].y = v->fy >> 8;
+        }
+    }
+}
