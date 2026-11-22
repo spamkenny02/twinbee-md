@@ -81,10 +81,25 @@ static Sprite *sEnemy[MAX_SPR16], *sEx[MAX_EX], *sEn10[MAX_SPR10];
 static const E2Data* E2;
 static Sprite* sE2[4][E2_POOL_MAX];
 static u16 rIdx[MAX_ENEMIES], rT[MAX_ENEMIES], rR[MAX_ENEMIES];
+static u16 pblk[MAX_ENEMIES];                 // bloc de trajectoire décompressé de chaque ennemi (0xFFFF = aucun)
+#define pbuf ((u8 (*)[RA_BLKSZ]) raWork)
+#define efr ((u8 (*)[64]) (raWork + 4096))               // image courante décompressée de chaque ennemi (E2Frame de 61 o, bloc de 64)
+static u8 rfv[MAX_ENEMIES];
+static u16 rblk[MAX_ENEMIES];                 // idem pour la liste (image, durée) : 16 entrées de 4 octets par bloc
+#define rbuf ((u8 (*)[RA_BLKSZ]) (raWork + 2048))
 static u16 rF[MAX_ENEMIES];
 static u8 rL[MAX_ENEMIES];
+static void runGet(s16 i)
+{
+    const u16 b = rR[i] >> 4;
+    const u8* p; u16 k;
+    if (rblk[i] != b) { RA_block(E2->run, b, rbuf[i]); rblk[i] = b; }
+    k = rR[i] & 15;
+    p = rbuf[i];
+    { const u16 f = (p[k] << 8) | p[16 + k]; rL[i] = p[32 + k]; if (f != rF[i] || rfv[i] == 0) { rF[i] = f; RA_block(E2->frames, f, efr[i]); rfv[i] = 1; } }
+}
 static s16 spawn2, spawnB2;
-static bool e2Off, bnOn, bnDone;      // boss des stages 3+ : les ennemis rejoués sont retirés pendant le combat
+static bool e2Off = TRUE, bnOn, bnDone;      // boss des stages 3+ : les ennemis rejoués sont retirés pendant le combat
 
 static void e2Release(void)
 {
@@ -103,7 +118,7 @@ static void e2Draw(void)
     {
         const E2Frame* fr;
         if ((KIND[i] < 32) || !enemies.on[i] || (enemies.on[i] >= 3)) continue;
-        fr = &E2->frames[rF[i]];
+        fr = (const E2Frame*) efr[i];
         for (k = 0; k < fr->n; k++)
         {
             const E2Piece* pc = &fr->p[k];
@@ -505,9 +520,9 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             // ennemi du stage 2 : trajectoire rejouée depuis le gabarit relevé sur PCE
             const E2Tpl* tp = &E2->tpl[E2->inst[rIdx[i]].tpl];
             if ((rT[i] + 1) >= tp->len) { enemies.on[i] = 0; continue; }
-            { u8 pi = E2->pi[tp->off + rT[i]]; enemies.x[i] += E2->pdx[pi]; enemies.y[i] += E2->pdy[pi]; }
+            { const u32 po = tp->off + rT[i]; const u16 pb = (u16) (po >> 6); u8 pi; if (pblk[i] != pb) { RA_block(E2->pi, pb, pbuf[i]); pblk[i] = pb; } pi = pbuf[i][po & 63]; enemies.x[i] += E2->pdx[pi]; enemies.y[i] += E2->pdy[pi]; }
             rT[i]++;
-            if (--rL[i] == 0) { rR[i]++; rF[i] = E2->rf[rR[i]]; rL[i] = E2->rl[rR[i]]; }
+            if (--rL[i] == 0) { rR[i]++; runGet(i); }
 #if !ENEMY_TEST_PRE
             if (contactOn && (enemies.y[i] > 0)) contact(i, f, playerObjX, playerObjY, bonus);
 #endif
@@ -891,7 +906,7 @@ void ENEMY_update(s16 frame, s16 playerObjX, s16 playerObjY, s16 scrollDelta, u1
             for (i = 0; i < MAX_ENEMIES; i++)
             {
                 if (enemies.on[i]) continue;
-                enemies.on[i] = 1; KIND[i] = 32 + in->ty; rIdx[i] = spawn2; rT[i] = 0; rR[i] = E2->tpl[in->tpl].roff; rF[i] = E2->rf[rR[i]]; rL[i] = E2->rl[rR[i]]; group[i] = NOGROUP; hp[i] = 1;
+                enemies.on[i] = 1; KIND[i] = 32 + in->ty; rIdx[i] = spawn2; rT[i] = 0; pblk[i] = 0xFFFF; rR[i] = E2->tpl[in->tpl].roff; rblk[i] = 0xFFFF; rfv[i] = 0; runGet(i); group[i] = NOGROUP; hp[i] = 1;
                 enemies.x[i] = in->x; enemies.y[i] = in->y;
                 break;
             }

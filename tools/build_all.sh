@@ -20,5 +20,6 @@ python3 tools/mkenemiesN.py 4 extract/s4_inst.pkl extract/ebul4.pkl dumps/s3s 72
 python3 tools/mkenemiesN.py 5 extract/s5_inst.pkl extract/ebul5.pkl dumps/s5s 92067 112946 48 58 > /dev/null
 python3 tools/mkenemiesN.py 6 extract/s6_inst.pkl extract/ebul6.pkl dumps/s5s 113337 122656 60 76 > /dev/null
 python3 tools/lzspack.py md/twinbee/src/boss3_data.h md/twinbee/src/boss4_data.h md/twinbee/src/boss5_data.h md/twinbee/src/boss6_data.h md/twinbee/src/end_sprd.h
+python3 tools/rapack.py md/twinbee/src/stage2_enemies.h md/twinbee/src/stage3_enemies.h md/twinbee/src/stage4_enemies.h md/twinbee/src/stage5_enemies.h md/twinbee/src/stage6_enemies.h
 tools/mdbuild.sh md/twinbee 2>&1 | grep -i "error\|warning" || true
 ls -la md/twinbee/out/rom.bin

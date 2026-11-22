@@ -484,3 +484,10 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 ## Jalon 43 — compression des flux
 - `tools/lzspack.py` (appelé par build_all.sh, idempotent) compresse en LZ4 par blocs de 2 Ko `bossN_flux` (N=3..6) et `ends_X_flux` ; `src/lzs.c/h` les décompresse au fil de l'eau (tampon 2,5 Ko, `LZS_ensure()` avant chaque frame, marge 512 o > frame max). Un seul flux ouvert à la fois. Décodeur vérifié en natif (boss3 complet, lectures irrégulières) et en émulateur (boss 3 affiché, fin identique).
 - ROM : 4 063 232 → 2 883 584 octets. Reste non compressé : `e2..e6_pi/rf/rl/frames` (≈1,35 Mo, accès aléatoire par ennemi : il faudrait un cache de blocs) et boss 2.
+
+## Jalon 44 — compression des ennemis rejoués
+- `tools/rapack.py` (appelé par build_all.sh après mkenemiesN, idempotent) : `eN_pi` (trajectoires), `eN_rf`+`eN_rl` fusionnés en `eN_run` (planaire, 16 entrées par bloc) et `eN_frames` (1 image = 1 bloc de 64 o) en LZ4 par blocs de 64 o. Accès aléatoire : `RA_block()` (src/ra.c).
+- Chaque ennemi garde son bloc courant décompressé (`pbuf`, `rbuf`, `efr` dans `raWork`, 6 Ko partagés avec le tampon `lzs` des boss/de la fin). Un cache LRU partagé a été essayé : trop lent (thrash, jeu à 60 % de vitesse) puis trop gourmand en RAM.
+- Piège RAM : la limite pratique est ≈ 25 Ko de BSS (au-delà, le heap SGDK ne suffit plus : fond du stage 2 corrompu, `ILLEGAL INSTRUCTION` dans le dépaquetage LZ4W au stage 4). BSS actuel 23,9 Ko.
+- `e2Off` initialisé à TRUE (l'ennemi n'est ni mis à jour ni dessiné avant ENEMY_init).
+- ROM : 2 883 584 → 2 621 440 octets. Non compressé : boss 2 (≈100 Ko), tables de scroll des stages, tilesets/sprites (PNG rescomp).

@@ -1,5 +1,6 @@
 #include "lzs.h"
-static u8 buf[LZS_BLK + LZS_MARGIN];
+#include "ra.h"
+#define buf raWork          // partagé avec les tampons des ennemis (voir ra.h)
 static u8* end;
 static const u8* zs;
 static const u8* z0;
