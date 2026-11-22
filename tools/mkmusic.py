@@ -25,7 +25,7 @@ HMAX = int(os.environ.get('HMAX', '4'))       # harmonique maximale conservée (
 NH = int(os.environ.get('NH', '3'))           # nombre d'opérateurs utilisés
 QUANT = int(os.environ.get('QUANT', '1'))     # hauteur arrondie au demi-ton (supprime vibrato et désaccord)
 ONLY = os.environ.get('MUS_ONLY')   # ex '1' ou '4' : ne garde que ce canal PCE (test de calibration)
-START = 3560                    # première frame utile des captures g<ID>
+START = int(os.environ.get('START', '3560'))                    # première frame utile des captures g<ID>
 
 def att_db(vol, pan, main):
     """atténuation PCE (dB) pour un volume canal 5 bits, panoramique et amplitude principale (octets L/R)"""
@@ -135,7 +135,7 @@ def find_loop(rows):
     return L0, P, m
 
 def convert(sid, out, maxframes=None, noloop=False):
-    rows, dda = capture(f'/home/claude/work/dumps/songs/g{sid}.psg')
+    rows, dda = capture(os.environ.get('PSGFILE') or f'/home/claude/work/dumps/songs/g{sid}.psg')
     if noloop:
         L0, P, m = 0, len(rows), 0
         total = len(rows)

@@ -514,3 +514,4 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Pacing en temps réel (vtimer) : images logo 12→490, fondu 490-526.
 - Jingle Konami : son PCE 0B (SFX_KONAMI, res/sfx/s11.wav) lancé à l'image 170 du logo, mesuré dans l'émulateur MD (début ≈ image 172).
 - Jingle Konami refait en piste musique XGM2 (MUS_KONAMI = s11.vgm via tools/mkmusic.py 11, MAXF=140) au lieu d'un PCM 13 kHz (son sale).
+- Jingle Konami : capture PSG propre au vrai boot (dumps/songs/gk11.psg, la g11 était polluée par la musique de jeu) ; conversion : START=170 MAXF=135 MB=2.5 PSGFILE=dumps/songs/gk11.psg python3 tools/mkmusic.py 11. Hauteurs vérifiées contre l'audio PCE (660/990/1050/1320 Hz).
