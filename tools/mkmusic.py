@@ -19,6 +19,11 @@ FM_BASE = 144 * 2**20 / YM_CLK  # fnum = f*FM_BASE/2^(block-1)
 G_FM = float(os.environ.get('G_FM', '-5.5'))    # dB, gain global FM
 G_PSG = float(os.environ.get('G_PSG', '4.6'))
 G_PCM = float(os.environ.get('G_PCM', '-3'))
+MB = float(os.environ.get('MB', '7'))             # dB, gain général (volume trop bas après simplification du timbre)
+G_FM += MB; G_PSG += MB; G_PCM += MB
+HMAX = int(os.environ.get('HMAX', '4'))       # harmonique maximale conservée (timbre plus doux)
+NH = int(os.environ.get('NH', '3'))           # nombre d'opérateurs utilisés
+QUANT = int(os.environ.get('QUANT', '1'))     # hauteur arrondie au demi-ton (supprime vibrato et désaccord)
 ONLY = os.environ.get('MUS_ONLY')   # ex '1' ou '4' : ne garde que ce canal PCE (test de calibration)
 START = 3560                    # première frame utile des captures g<ID>
 
@@ -37,10 +42,10 @@ def wave_ops(wave, fhz):
     sp = np.abs(np.fft.rfft(a))[1:16] * 2 / 32          # harmoniques 1..15
     cand = []
     for h in range(1, 16):
-        if fhz * h > 9000: continue
+        if fhz * h > 9000 or h > HMAX: continue
         cand.append((sp[h - 1], h))
     cand.sort(reverse=True)
-    sel = [(h, amp / 15.5) for amp, h in cand[:4] if amp > 0.04 * (cand[0][0] if cand else 1) and amp > 0.15]
+    sel = [(h, amp / 15.5) for amp, h in cand[:NH] if amp > 0.04 * (cand[0][0] if cand else 1) and amp > 0.15]
     sel.sort()
     _wave_cache[key] = sel
     return sel
@@ -185,6 +190,7 @@ def convert(sid, out, maxframes=None, noloop=False):
     fm_src = {0: 1, 1: 2, 2: 3, 3: 0}            # fm index -> canal PCE
     sc = [np.array([any(r[0][c]['on'] and r[0][c]['vol'] > 0 for _ in [0]) for r in rows[:total]]).mean() for c in range(6)]
     fm_state = [None] * 5
+    qstate = [None] * 5
     psg_state = dict(tone=[None] * 3, vol=[15] * 4, noise=None)
     for p in range(4): vg.psg(0x90 | (p << 5) | 15)
     stats = collections.Counter()
@@ -230,6 +236,12 @@ def convert(sid, out, maxframes=None, noloop=False):
             prev = fm_state[fi_ch]
             if aud:
                 fhz = 111861.0 / ch['f']
+                if QUANT:
+                    st = 12 * math.log2(fhz / 440.0)
+                    cur = qstate[fi_ch]
+                    if cur is None or abs(st - cur) > 0.75 or (prev is None or prev[0] is None): cur = round(st)
+                    qstate[fi_ch] = cur
+                    fhz = 440.0 * 2 ** (cur / 12)
                 ops = wave_ops(ch['wave'], fhz)
                 a_db = att_db(ch['vol'], ch['pan'], main) - G_FM - (2.0 if src == 2 else 0.0)
                 if not ops: aud = False
@@ -259,7 +271,7 @@ def convert(sid, out, maxframes=None, noloop=False):
                 if prev is not None and prev[0] is not None:
                     vg.ym(0, 0x28, (c if c < 3 else c + 1))
                     stats['fm_off'] += 1
-                fm_state[fi_ch] = (None,)
+                fm_state[fi_ch] = (None,); qstate[fi_ch] = None
         # ---- PSG ton 0 <- canal 5
         def psg_tone(pi, ch):
             aud = ch['on'] and ch['vol'] > 0 and ch['f'] > 0

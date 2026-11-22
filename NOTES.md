@@ -440,3 +440,8 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Ramassage observé (it2, joueur sous l'objet) : aucun point, aucun changement durable de la RAM utile → effet = SFX seul (sous-type 0, ROM `$AE71` : SFX $22).
 - Les 4 autres sous-types de la routine ROM (banque $17 `$AE44`) : 1 efface les objets ($AE77), 2 `$3438 |= $08` + SFX $28 ($AEDC, éventail), 3 `$A0 |= $10` ($AF07, bouclier), 4 vie +1 BCD max 99 + SFX $23 ($AEF4). Jamais vus en jeu : source/tirage inconnus (peut-être les mêmes objets hors stage 1, ou issus d'autres événements).
 - MD : `itemDrop/itemUpdate` (enemy.c), 2 emplacements, fruits alternés pêche/pomme (`spr_item`, `tools/mkitem.py` depuis les dumps it1), ramassage |dx|,|dy| < 12 (estimé), SFX cloche. Vérifié à l'émulateur (affichage et chute).
+
+## Jalon 35 — Musique : rendu plus doux
+- Retour utilisateur : musique « horrible ». Partitions/MIDI introuvables : la recherche web trouve les packs VGM (vgmrips.net topic 1991/1989) et les MDX X68000 (ocremix.org chip 8301) mais le shell n'a pas accès à ces hôtes (proxy 403). Si l'utilisateur fournit les .vgz, les convertir à la place.
+- `tools/mkmusic.py` : hauteurs arrondies au demi-ton avec hystérésis 0,75 (supprime vibrato et désaccord, `QUANT=1`), timbre limité à 3 opérateurs et harmoniques ≤ 4 (`NH`, `HMAX`), gain général +7 dB (`MB`) : la part d'énergie > 3 kHz passe à ~2 % et le niveau RMS du titre de −26 à −20 dBFS (crête 64 %, sans écrêtage). Mesuré au rendu Genesis Plus GX (titre).
+- Non vérifié à l'oreille.
