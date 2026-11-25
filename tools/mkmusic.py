@@ -23,6 +23,18 @@ MB = float(os.environ.get('MB', '0'))              # dB, gain général (appliqu
 G_FM += MB; G_PSG += MB; G_PCM += MB
 HMAX = int(os.environ.get('HMAX', '8'))        # harmonique maximale conservée
 NH = int(os.environ.get('NH', '4'))            # nombre d'opérateurs utilisés
+# correction de basse : atténuation en cloche des harmoniques 150-800 Hz
+# (l'additif FM rend la basse et le bas-médium plus « pleins » que le PSG PCE)
+BASS_DB = float(os.environ.get('BASS_DB', '2.5'))
+BASS_FC = float(os.environ.get('BASS_FC', '240'))
+BASS_W = float(os.environ.get('BASS_W', '0.9'))
+BASS_CH_DB = float(os.environ.get('BASS_CH_DB', '1.5'))   # atténuation supplémentaire du canal de basse
+BASS_HZ = float(os.environ.get('BASS_HZ', '150'))
+
+def bass_gain(fhz):
+    if BASS_DB <= 0 or fhz <= 0: return 1.0
+    x = math.log2(fhz / BASS_FC) / BASS_W
+    return 10 ** (-BASS_DB * math.exp(-0.5 * x * x) / 20)
 QUANT = int(os.environ.get('QUANT', '1'))     # hauteur arrondie au demi-ton (supprime vibrato et désaccord)
 ONLY = os.environ.get('MUS_ONLY')   # ex '1' ou '4' : ne garde que ce canal PCE (test de calibration)
 START = int(os.environ.get('START', '0'))       # 0 = auto : première frame où un canal est actif
@@ -60,6 +72,7 @@ def wave_ops(wave, fhz):
     if cur > 0:
         k = rms_w / cur
         sel = [(h, x * k) for h, x in sel]
+    sel = [(h, x * bass_gain(fhz * h)) for h, x in sel]
     _wave_cache[key] = sel
     return sel
 
@@ -175,6 +188,16 @@ def find_loop(rows):
 
 def convert(sid, out, maxframes=None, noloop=False):
     rows, dda = capture(os.environ.get('PSGFILE') or f'/home/claude/work/dumps/songs/g{sid}.psg')
+    # canaux PCE mélodiques portant la basse (médiane < BASS_HZ) : atténuation supplémentaire optionnelle
+    bass_ch = set()
+    if BASS_CH_DB > 0:
+        for c in (0, 1, 2, 3, 5):
+            fs = [111861.0 / r[0][c]['f'] for r in rows
+                  if r[0][c]['on'] and r[0][c]['vol'] > 0 and r[0][c]['f'] > 0]
+            if fs and len(fs) > 0.25 * len(rows) and float(np.median(fs)) < BASS_HZ:
+                bass_ch.add(c)
+    if bass_ch:
+        print(f'  basse atténuée de {BASS_CH_DB:+.1f} dB : canal(aux) {sorted(bass_ch)}')
     if noloop:
         L0, P, m = 0, len(rows), 0
         total = len(rows)
@@ -294,7 +317,7 @@ def convert(sid, out, maxframes=None, noloop=False):
                     qstate[fi_ch] = cur
                     fhz = 440.0 * 2 ** (cur / 12)
                 ops = wave_ops(ch['wave'], fhz)
-                a_db = att_db(ch['vol'], ch['pan'], main) - G_FM
+                a_db = att_db(ch['vol'], ch['pan'], main) - G_FM + (BASS_CH_DB if src in bass_ch else 0.0)
                 if not ops: aud = False
             if aud:
                 blk, fn = fm_freq(fhz)
