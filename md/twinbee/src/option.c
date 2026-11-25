@@ -4,6 +4,8 @@
 //   - RANK : NORMAL -> EASY -> PRO -> HARD avec GAUCHE (DROITE inverse), bouclage ;
 //   - CREDIT / PLAYER : 1..5, DROITE +1, GAUCHE -1, bouclage 5 <-> 1 ;
 //   - SOUND : test de sons en hexadécimal 00..3E, bouclage (DROITE 3E -> 00, GAUCHE 00 -> 3E) ;
+//   - SOUND : GAUCHE/DROITE changent la valeur en silence, la touche I joue l'entrée
+//     (routine PCE : LDY $73 / LDA $C843,Y / JSR $E3FC, table relevée dans la ROM) ;
 //   - HAUT/BAS changent de ligne en bouclant, RUN (= START) sort vers l'écran titre.
 #include <genesis.h>
 #include "option.h"
@@ -46,6 +48,57 @@ static u8 wrapSound(u8 d)
     if (d) { if (optSound == 0x3E) optSound = 0; else optSound++; }
     else   { if (optSound == 0) optSound = 0x3E; else optSound--; }
     return optSound;
+}
+
+// Table du test de son de la PC Engine (banque $15, $C843) : valeur affichée -> ID du driver
+// sonore PCE. Vérifiée en émulation (00 -> 0B, 05 -> 19, 08 -> 1C, 19 -> 35).
+static const u8 optSoundId[0x3F] = {
+    0x0B, 0x3E, 0x11, 0x17, 0x18, 0x19, 0x1A, 0x1B,
+    0x1C, 0x1D, 0x1E, 0x2D, 0x1F, 0x23, 0x20, 0x21,
+    0x2B, 0x31, 0x22, 0x24, 0x26, 0x2E, 0x40, 0x2F,
+    0x32, 0x35, 0x36, 0x37, 0x3C, 0x38, 0x28, 0x45,
+    0x2C, 0x3A, 0x3B, 0x33, 0x34, 0x39, 0x29, 0x4D,
+    0x53, 0x5B, 0x62, 0x67, 0x6C, 0x71, 0x7B, 0x80,
+    0x87, 0x8C, 0x91, 0x97, 0x9D, 0xA3, 0x01, 0x02,
+    0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A
+};
+
+// Joue l'entrée courante (touche I sur PCE = B sur MD, A accepté aussi).
+// Les ID sans équivalent MD restent muets : bruitages PCE non portés (0B, 11, 1C, 1E, 20..26,
+// 2B..2E, 32, 33, 36..3C, 45, 01..04, 06, 07, 0A) et pistes 97/9D absentes des 12 converties.
+static void soundTestPlay(void)
+{
+    switch (optSoundId[optSound])
+    {
+        case 0x05: SFX_play(SFX_FALL);    break;
+        case 0x08: SFX_play(SFX_RESP2);   break;
+        case 0x17: SFX_play(SFX_SHOT);    break;
+        case 0x18: SFX_play(SFX_BOMB);    break;
+        case 0x19: SFX_play(SFX_BELLGET); break;
+        case 0x1A: SFX_play(SFX_BELLHIT); break;
+        case 0x1B: SFX_play(SFX_BOOM);    break;
+        case 0x1D: SFX_play(SFX_BIG);     break;
+        case 0x1F: SFX_play(SFX_BHIT);    break;
+        case 0x28: SFX_play(SFX_POWER);   break;
+        case 0x2F: SFX_play(SFX_DEATH1);  break;
+        case 0x31: SFX_play(SFX_RESP1);   break;
+        case 0x34: SFX_play(SFX_BDEAD);   break;
+        case 0x35: SFX_play(SFX_BHIT2);   break;
+        case 0x40: SFX_play(SFX_BXPL);    break;
+        case 0x4D: MUS_play(MUS_STAGE1);  break;
+        case 0x53: MUS_play(MUS_TITLE);   break;
+        case 0x5B: MUS_play(MUS_STAGE1);  break;
+        case 0x62: MUS_play(MUS_STAGE2);  break;
+        case 0x67: MUS_play(MUS_STAGE3);  break;
+        case 0x6C: MUS_play(MUS_STAGE4);  break;
+        case 0x71: MUS_play(MUS_STAGE5);  break;
+        case 0x7B: MUS_play(MUS_STAGE6);  break;
+        case 0x80: MUS_play(MUS_BOSS_A);  break;
+        case 0x87: MUS_play(MUS_BOSS_B);  break;
+        case 0x8C: MUS_play(MUS_BOSS_6);  break;
+        case 0x91: MUS_play(MUS_CLEAR);   break;
+        case 0xA3: MUS_play(MUS_GAMEOVER);break;
+    }
 }
 
 static void refreshValues(void)
@@ -113,6 +166,9 @@ void OPTION_run(void)
             if (sel == 3) wrapSound(1);
             refreshValues();
         }
+        // test de son : la touche I de la PCE (B sur MD, A accepté) joue l'entrée sélectionnée
+        if (sel == 3 && (joy & (BUTTON_A | BUTTON_B)) && !(prev & (BUTTON_A | BUTTON_B)))
+            soundTestPlay();
         prev = joy; prev2 = joy2;
         SPR_update();
         SYS_doVBlankProcess();
@@ -122,6 +178,7 @@ void OPTION_run(void)
     SPR_releaseSprite(sRank); SPR_releaseSprite(sCredit); SPR_releaseSprite(sPlayer);
     SPR_releaseSprite(sSoundT); SPR_releaseSprite(sSound);
     SPR_update();
+    MUS_stop();                                     // coupe une piste lancée par le test de son
     VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE);
     PAL_setColors(0, palette_black, 64, CPU);
     SYS_doVBlankProcess();

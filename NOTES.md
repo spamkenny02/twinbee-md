@@ -560,3 +560,12 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Verifie en headless** (ROM de test `md/sfxtest`, capture 62 s) : gain du pilote XGM2 constant (-11,3 a -13,8 dB, moyenne -12,2), RMS MD = RMS PCE **a +/-1,4 dB** (moyenne +0,5) sur les 15 effets, pic max -12,4 dBFS (aucun ecretage). Durees conformes (2F 2,13 s au lieu de 1,60 s tronque), fins a -0,001 (pas de clic).
 - **Equilibre en jeu** : capture attract 60 s de la ROM de prod contre la PCE : pic -8,4 / -8,0 dBFS, RMS -27,2 / -26,0, p95 des fenetres 50 ms -21,7 / -21,4, p99 -20,9 / -20,1. Musique du titre inchangee (prod contre trk5_83 : RMS -26,3 / -26,5, bandes a +/-1,5 dB).
 - **ROM** : 3 407 872 o, CRC32 **`ECB1B831`**, MD5 `24fe821d01304b1d43656dd4777498e3` ; `sfx` compiles 462 080 o (contre 464 128).
+
+## Jalon 55 - test de son de l'ecran OPTION
+
+- **Symptome** : dans OPTION, SOUND changeait de valeur mais ne jouait aucun son.
+- **Comportement PCE releve** (banc libretro + RAM) : GAUCHE/DROITE changent la valeur 00..3E en boucle et **en silence** ; la touche **I** joue l'entree ; II, A/B/C et SELECT ne jouent rien. La routine est en banque $15 : `LDY $73 / LDA $C843,Y / JSR $E3FC` (requete au driver sonore). Table relevee dans la ROM ($2A843) et verifiee en emulation : 00 -> 0B (2,3 s), 05 -> 19 (0,65 s), 08 -> 1C (1,25 s), 19 -> 35 (1,25 s), 3A -> 05 (0,85 s), 28 -> 53 (musique du titre).
+- **Correctif MD** (option.c) : table optSoundId[0x3F] identique a la PCE, soundTestPlay() mappe les 15 bruitages portes (05, 08, 17..1B, 1D, 1F, 28, 2F, 31, 34, 35, 40) sur SFX_play et les 12 pistes (4D, 53, 5B, 62, 67, 6C, 71, 7B, 80, 87, 8C, 91, A3) sur MUS_play ; touche B (I sur PCE, A accepte aussi) ; MUS_stop() a la sortie de l'ecran.
+- **Entrees encore muettes** : 34 valeurs pointent vers des bruitages PCE non portes (0B, 11, 1C, 1E, 20..26, 2B..2E, 32, 33, 36..3C, 45, 01..04, 06, 07, 0A) et 2 pistes absentes des 12 converties (97, 9D).
+- **Verifie en headless** (ROM de prod, 3500 images) : OPTION atteint par BAS x2 + START ; SOUND 05 joue 0,7 s (BELLGET 19), 08 muet (1C non porte), 3A joue 0,85 s (FALL 05), 28 lance la musique du titre (8,5 s) et START la coupe a la sortie.
+- **ROM** : 3 407 872 o, CRC32 **4B68DE8A**, MD5 36123db77c28bfbbb5d74e969e760be6.
