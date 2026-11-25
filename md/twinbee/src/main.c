@@ -115,6 +115,7 @@ static bool attractDemo(u8 stage, const u8 (*path)[2], u16 frames, bool keepMusi
     }
     debugInvincible = FALSE;
     demoHud = FALSE;
+    STAGE_releaseMap();                                    // rend la carte au tas avant le titre / la carte princesse
     if (!keepMusic) MUS_stop();                            // phase 1 : le theme du stage 2 continue sur la carte
     SPR_end();
     return skipped;

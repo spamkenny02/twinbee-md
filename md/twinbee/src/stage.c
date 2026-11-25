@@ -143,6 +143,14 @@ void STAGE_setDemoScroll(const u8* tab, u16 frames)
     scrollFrames = frames;
 }
 
+// Fin de demo d'attract : la carte du decor n'est plus affichee. La liberer rend au tas les
+// ~12-17 Ko qu'elle occupe, sinon le tileset du logo du titre (316 tuiles) ne peut plus etre
+// decompresse et l'ecran suivant se corrompt.
+void STAGE_releaseMap(void)
+{
+    if (bg) { MAP_release(bg); bg = NULL; }
+}
+
 void STAGE_init(void)
 {
     MUS_stop();

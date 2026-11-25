@@ -523,4 +523,13 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Compression** : toutes les ressources en `BEST` (tilesets stage 1..6/hud/boss, maps stage 1..6, images, sprites) → 3 014 656 o (23 blocs) à **2 883 584 o (22 blocs)**, `ROM end $002BFFFF`, CRC32 **`385FAE1C`**.
 - **Heap** : `STAGE_init()` libère l'ancienne carte avant `VDP_loadTileSet` et `STAGE_update()` la libère avant `BOSS2_start()` ; sans ça l'unpack du tileset (stage 2 : 23,5 Ko, boss 2 : 20,5 Ko, carte : 28,6 Ko) échoue dans ~40 Ko de tas et laisse l'ancien décor en VRAM (première ROM BEST corrompue).
 - **Vérifié en headless** : cycle complet titre → démo 1 → saynète → titre → démo 2 → carte → Konami → vol → titre ; stage 2 jouable et boss 2 avec les ressources `BEST` ; carte comparée à la PCE 13420-13740 (mêmes étapes de révélation).
-- **Limites assumées** : pas d'ennemis ni de boss dans la démo (fin sur le décor avant-boss) ; le banc libretro consomme ~9 % d'images de plus que la logique (frames dupliquées), sans incidence sur les durées du jeu.
+- **Limites assumées** : pas de boss dans la démo (la démo PCE s'arrête avant l'arène) ; les ennemis des deux démos sont bien présents (vérifié en headless).
+- **Banc** : le libretro consomme ~9 % d'images de plus que la logique (frames dupliquées), sans incidence sur les durées du jeu.
+
+## Jalon 51 — correctif heap : plus de crash au 2e écran-titre
+
+- **Symptôme** : après un cycle complet (démo 2 + carte + Konami + titre), le titre suivant s'affichait sans logo ni « 1 PLAYER », puis plantait ~400 images plus tard (`ILLEGAL INSTRUCTION`, PC `$F90001`, pile `SR=$2304 PC=$4EF90001`).
+- **Cause** : la carte du décor (`bg`) n'était jamais libérée à la fin de `attractDemo()`. Au titre suivant, le plus gros bloc libre du tas tombait à 9 490 o, insuffisant pour décompresser le tileset du logo (316 tuiles = 10 112 o) ; `VDP_loadTileSet` échouait, les tuiles du logo et de sprites manquaient, puis le moteur sprite sautait sur une adresse corrompue. La démo stage 2 laissait ~12 Ko occupés, la démo stage 1 ~17 Ko.
+- **Correctif** : `STAGE_releaseMap()` (`stage.c`) libère `bg` ; appelée en fin de `attractDemo()` (`main.c`). Le tas revient à 25 184 o libres / 19 440 o plus gros bloc au titre (identique au boot).
+- **Vérifié en headless** : deux cycles complets (titres ~16 500 et ~24 500), titres complets, démos stage 1 et 2 avec ennemis, plus de crash ; tas stable d'un cycle à l'autre (25 184 o libres, plus gros bloc 19 440 → 20 320 o).
+- **ROM** : 2 883 584 o (22 blocs), CRC32 **`245531E0`**, MD5 `b3c0d4da38c8b59454ae45ba8b1f22fb`, checksum d'en-tête `$016F`, `ROM end $002BFFFF`.

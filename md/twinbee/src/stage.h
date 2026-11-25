@@ -41,6 +41,7 @@ void STAGE_join(void);              // le joueur 2 entre : HUD 2P
 void STAGE_update(void);            // une frame de jeu (après PLAYER_update)
 void STAGE_draw(void);              // position des sprites, défilement, HUD
 void STAGE_releaseClouds(void);
+void STAGE_releaseMap(void);        // libere la carte du decor (fin de demo d'attract : le titre a besoin du tas)
 void STAGE_eraseBoss(void);
 void STAGE_afterVBlank(void);       // écritures de palette, juste après le VBlank
 
