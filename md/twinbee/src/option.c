@@ -85,6 +85,10 @@ static void soundTestPlay(void)
         case 0x34: SFX_play(SFX_BDEAD);   break;
         case 0x35: SFX_play(SFX_BHIT2);   break;
         case 0x40: SFX_play(SFX_BXPL);    break;
+        case 0x3E:                        // ID d'arrêt du driver PCE : coupe musique et bruitages
+            MUS_stop();
+            XGM2_stopPCM(SOUND_PCM_CH2); XGM2_stopPCM(SOUND_PCM_CH3);
+            break;
         case 0x4D: MUS_play(MUS_STAGE1);  break;
         case 0x53: MUS_play(MUS_TITLE);   break;
         case 0x5B: MUS_play(MUS_STAGE1);  break;
