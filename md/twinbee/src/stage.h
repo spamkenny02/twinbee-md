@@ -31,10 +31,12 @@ typedef struct
 
 extern StageState stage;
 extern bool debugInvincible;
+extern bool demoHud;                   // TRUE : HUD de la demo d'attract (2P GAME OVER, sans CREDIT)
 extern u8 stageNo;                     // stage en cours (1 ou 2), à fixer avant STAGE_init
 extern s16 stageClearTimer;            // > 0 : boss de fin vaincu, frames écoulées depuis
 
 void STAGE_init(void);
+void STAGE_setDemoScroll(const u8* tab, u16 frames);   // demo d'attract : defilement releve sur PCE
 void STAGE_join(void);              // le joueur 2 entre : HUD 2P
 void STAGE_update(void);            // une frame de jeu (après PLAYER_update)
 void STAGE_draw(void);              // position des sprites, défilement, HUD

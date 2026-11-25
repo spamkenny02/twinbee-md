@@ -515,3 +515,12 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - Jingle Konami : son PCE 0B (SFX_KONAMI, res/sfx/s11.wav) lancé à l'image 170 du logo, mesuré dans l'émulateur MD (début ≈ image 172).
 - Jingle Konami refait en piste musique XGM2 (MUS_KONAMI = s11.vgm via tools/mkmusic.py 11, MAXF=140) au lieu d'un PCM 13 kHz (son sale).
 - Jingle Konami : capture PSG propre au vrai boot (dumps/songs/gk11.psg, la g11 était polluée par la musique de jeu) ; conversion : START=170 MAXF=135 MB=2.5 PSGFILE=dumps/songs/gk11.psg python3 tools/mkmusic.py 11. Hauteurs vérifiées contre l'audio PCE (660/990/1050/1320 Hz).
+
+## Jalon 50 — attract complet (démo stage 2 + carte), écrans titre/OPTION/scène, ROM compressée
+- **Démo stage 2** : trajectoire du vaisseau relevée en RAM PCE (`$BA..$BD`, 3316 positions → `src/demo_path2.h`) et table de défilement dédiée (`demoScroll2[]`, 1658 o, 1101 px / 3316 images, 1 px toutes les 3 images) posée par `STAGE_setDemoScroll()` uniquement pendant l'attract ; le stage jouable garde `stage2_scroll`.
+- **Attract en deux phases** (`titleOrAttract()`) : phase 0 = démo stage 1 + saynète garçon/TwinBee ; phase 1 = démo stage 2 + `CARD_run()` (carte princesse 128x128, mot révélé à 150, logo complet à 240, fin 370, musique coupée à 300) + `INTRO_run()`. START écourte chaque étape.
+- **Écrans** : scène de la princesse en français, saynète (2 poses + mot/logo), titre (1P/2P/OPTION), OPTION pixel-perfect (sprites + palette `opt_*`), HUD de démo « 2P GAME OVER ».
+- **Compression** : toutes les ressources en `BEST` (tilesets stage 1..6/hud/boss, maps stage 1..6, images, sprites) → 3 014 656 o (23 blocs) à **2 883 584 o (22 blocs)**, `ROM end $002BFFFF`, CRC32 **`385FAE1C`**.
+- **Heap** : `STAGE_init()` libère l'ancienne carte avant `VDP_loadTileSet` et `STAGE_update()` la libère avant `BOSS2_start()` ; sans ça l'unpack du tileset (stage 2 : 23,5 Ko, boss 2 : 20,5 Ko, carte : 28,6 Ko) échoue dans ~40 Ko de tas et laisse l'ancien décor en VRAM (première ROM BEST corrompue).
+- **Vérifié en headless** : cycle complet titre → démo 1 → saynète → titre → démo 2 → carte → Konami → vol → titre ; stage 2 jouable et boss 2 avec les ressources `BEST` ; carte comparée à la PCE 13420-13740 (mêmes étapes de révélation).
+- **Limites assumées** : pas d'ennemis ni de boss dans la démo (fin sur le décor avant-boss) ; le banc libretro consomme ~9 % d'images de plus que la logique (frames dupliquées), sans incidence sur les durées du jeu.

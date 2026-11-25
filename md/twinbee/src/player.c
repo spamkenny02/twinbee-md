@@ -1,4 +1,5 @@
 #include "player.h"
+#include "option.h"
 #include "mus.h"
 #include "resources.h"
 
@@ -82,7 +83,7 @@ void PLAYER_init(void)
     P.active = TRUE;
     P.x = PLAYER_START_X;
     P.y = PLAYER_START_Y;
-    P.lives = START_LIVES;
+    P.lives = optPlayer;
     P.speedLvl = PLAYER_SPEED_LVL0;
 }
 
@@ -95,7 +96,7 @@ void PLAYER_join(void)
     P.active = TRUE;
     P.x = PLAYER_START_X2; P.y = RESPAWN_Y;
     V.fx = (s32) P.x << 8; V.fy = (s32) P.y << 8;
-    P.lives = START_LIVES2;
+    P.lives = (optPlayer > 1) ? optPlayer - 1 : 1;
     P.speedLvl = PLAYER_SPEED_LVL0;
     P.phase = 2; P.inv = RESPAWN_INV;
     playerCur = 0;

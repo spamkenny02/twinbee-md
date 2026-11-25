@@ -13,3 +13,7 @@ WAV sfx_1F "sfx/s31.wav" XGM2 13300
 WAV sfx_34 "sfx/s52.wav" XGM2 13300
 WAV sfx_35 "sfx/s53.wav" XGM2 13300
 WAV sfx_40 "sfx/s64.wav" XGM2 13300
+WAV sfx_cursor "sfx/s_cursor.wav" XGM2 13300
+WAV sfx_start "sfx/s_start.wav" XGM2 13300
+WAV sfx_story "sfx/s_story.wav" XGM2 13300
+WAV sfx_sayn "sfx/s_sayn.wav" XGM2 13300

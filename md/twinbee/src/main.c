@@ -7,7 +7,13 @@
 #include "title.h"
 #include "intro.h"
 #include "end.h"
+#include "story.h"
+#include "saynete.h"
+#include "card.h"
+#include "option.h"
 #include "mus.h"
+#include "demo_path.h"
+#include "demo_path2.h"
 
 u16 gameFrame;
 static s16 credits;                       // continues restants
@@ -56,6 +62,7 @@ static void gameOverScreen(void)
 
 static void start(void)
 {
+    demoHud = FALSE;
     SPR_end();
     SPR_initEx((stageNo >= 2) ? 640 : 696); SPR_disableVDPSpriteChecking();        // VRAM sprites : le décor du stage 2 est plus gros (735 tuiles)
     SPR_reset();
@@ -67,18 +74,97 @@ static void start(void)
 
 static bool wantP2;
 
+// Démo d'attract : le vaisseau suit la trajectoire relevée sur la PC Engine (demo_path.h / demo_path2.h) ;
+// pas de tir (la démo PCE n'en fait pas), vaisseau invincible, 2 vies comme sur PCE.
+// START écourte comme sur PCE (retour logo + vol).
+static bool attractDemo(u8 stage, const u8 (*path)[2], u16 frames, bool keepMusic)
+{
+    u16 f, prev = JOY_readJoypad(JOY_1);
+    bool skipped = FALSE;
+    SPR_end();
+    SPR_initEx((stage >= 2) ? 640 : 696); SPR_disableVDPSpriteChecking();   // decor stage 2 plus gros (735 tuiles)
+    SPR_reset();
+    stageNo = stage;
+    demoHud = TRUE;                                         // « 2P GAME OVER », pas de CREDIT
+    STAGE_init();
+    if (stage >= 2) STAGE_setDemoScroll(demoScroll2, DEMO2_FRAMES);   // la demo PCE ne defile pas au rythme du stage
+    SYS_doVBlankProcess();
+    PLAYER_init();
+    players[0].lives = 2;                                   // « 1P 2 » sur la démo PCE
+    gameFrame = 0;
+    debugInvincible = TRUE;
+    for (f = 0; f < frames; f++)
+    {
+        const u16 raw = JOY_readJoypad(JOY_1);
+        const s16 dx = (s16) path[f][0] - players[0].x;
+        const s16 dy = (s16) path[f][1] - players[0].y;
+        u16 joy = 0;
+        if (dx > 0) joy |= BUTTON_RIGHT; else if (dx < 0) joy |= BUTTON_LEFT;
+        if (dy > 0) joy |= BUTTON_DOWN; else if (dy < 0) joy |= BUTTON_UP;
+        if ((raw & BUTTON_START) && !(prev & BUTTON_START)) { skipped = TRUE; break; }
+        prev = raw;
+        players[0].speedLvl = 6;                            // 2 px/image, vitesse de la démo PCE
+        PLAYER_update(0, joy, gameFrame);
+        STAGE_update();
+        gameFrame++;
+        PLAYER_draw(0);
+        STAGE_draw();
+        SPR_update();
+        SYS_doVBlankProcess();
+        STAGE_afterVBlank();
+    }
+    debugInvincible = FALSE;
+    demoHud = FALSE;
+    if (!keepMusic) MUS_stop();                            // phase 1 : le theme du stage 2 continue sur la carte
+    SPR_end();
+    return skipped;
+}
+
+// Attract complet, comme sur PCE : phase 0 = démo stage 1 + saynète garçon/TwinBee ; phase 1 =
+// démo stage 2 + carte de la princesse. Les deux phases finissent sur le logo Konami + le vol.
+static void attractRun(u8 phase)
+{
+    const bool skipped = phase ? attractDemo(2, demoPath2, DEMO2_FRAMES, TRUE)
+                               : attractDemo(1, demoPath, DEMO_FRAMES, FALSE);
+    if (phase == 0)
+    {
+        if (!skipped) SAYNETE_run();                        // garçon + TwinBee, puis logo (PCE 7105-7490)
+    }
+    else if (!skipped) CARD_run();                         // princesse + logo (PCE 13380-13740)
+    if (phase) MUS_stop();                                 // fin de la carte : silence avant le logo Konami
+    SPR_initEx(696); SPR_disableVDPSpriteChecking();
+    INTRO_run();                                            // logo + vol, puis retour au titre
+}
+
+// Boucle titre : si l'écran reste inactif, la démo d'attract se lance puis on revient au titre.
+// Les deux passages alternent la démo du stage 1 et celle du stage 2, comme sur PCE.
+static bool titleOrAttract(void)
+{
+    static u8 phase = 0;
+    bool play;
+    for (;;)
+    {
+        play = TITLE_run();
+        if (play) phase = 0;                                // partie lancée : l'attract repart à la phase 0
+        if (!titleWantsAttract) return play;
+        attractRun(phase);
+        phase ^= 1;
+    }
+}
+
 int main(bool hard)
 {
     u16 prevJoy = 0, prevJoy2 = 0;
     s16 contCount = -1, contTick = 0;
-    credits = 3;
+    credits = optCredit;
 
     VDP_setScreenWidth256();
     VDP_setPlaneSize(64, 32, TRUE);
     SPR_initEx(696); SPR_disableVDPSpriteChecking();
     MUS_init();
     INTRO_run();
-    wantP2 = TITLE_run();
+    wantP2 = titleOrAttract();
+    STORY_run();                                    // scene de la princesse (PCE 2082-3099), START l'abrege
 #ifdef DBG_ENDING
     ENDING_run();
 #endif
@@ -133,8 +219,8 @@ int main(bool hard)
             {
                 VDP_clearTextArea(0, 12, 32, 1);
                 gameOverScreen();
-                credits = 3; contCount = -1;
-                wantP2 = TITLE_run();
+                credits = optCredit; contCount = -1;
+                wantP2 = titleOrAttract();
                 stageNo = START_STAGE;
                 start();
                 prevJoy = JOY_readJoypad(JOY_1);
@@ -155,8 +241,8 @@ int main(bool hard)
             if ((stageNo == 6) && (stageClearTimer == 150))      // fin du jeu : séquence de fin, puis retour au titre
             {
                 MUS_stop(); ENDING_run(); SPR_reset();
-                credits = 3; stageClearTimer = 0;
-                wantP2 = TITLE_run(); stageNo = START_STAGE; start(); prevJoy = JOY_readJoypad(JOY_1);
+                credits = optCredit; stageClearTimer = 0;
+                wantP2 = titleOrAttract(); stageNo = START_STAGE; start(); prevJoy = JOY_readJoypad(JOY_1);
                 continue;
             }
             if (stageClearTimer == 1) MUS_play(MUS_CLEAR);
@@ -169,7 +255,7 @@ int main(bool hard)
             }
             if ((stageClearTimer > 150) && (joy & ~prevJoy & BUTTON_START))
             {
-                if (stageNo < 6) stageNo++; else { SPR_reset(); wantP2 = TITLE_run(); stageNo = START_STAGE; }
+                if (stageNo < 6) stageNo++; else { SPR_reset(); wantP2 = titleOrAttract(); stageNo = START_STAGE; }
                 start(); prevJoy = JOY_readJoypad(JOY_1);
                 continue;
             }

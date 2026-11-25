@@ -61,6 +61,7 @@ static u32 shownScore[2];
 static s16 prevShot[2][2][3], prevCharged[2][3];   // tirs à la frame précédente : actif/niveau, x, y
 s16 stageClearTimer;
 bool debugInvincible;                   // bouton A tenu : pas de contact ennemi/joueur (sert aux comparaisons)
+bool demoHud;                           // HUD de la demo d'attract
 static s16 shownLives, shownLives2;
 static s16 prevPlayerY[2];
 static s16 prevPlayerX[2];                 // x du joueur à la frame précédente (= x de l'objet joueur vu par les ennemis)
@@ -135,6 +136,13 @@ void STAGE_join(void)
 }
 
 // ---------------------------------------------------------------- init
+// Remplace la table de defilement du stage par celle relevee sur la demo d'attract PCE.
+void STAGE_setDemoScroll(const u8* tab, u16 frames)
+{
+    scrollTab = tab;
+    scrollFrames = frames;
+}
+
 void STAGE_init(void)
 {
     MUS_stop();
@@ -179,16 +187,21 @@ void STAGE_init(void)
             palEv = stage1_pal_events; palEvN = STAGE1_NUM_PAL_EVENTS; mapH = STAGE1_MAP_H; scrollTab = stage1_scroll; scrollFrames = STAGE1_SCROLL_FRAMES;
             cloudTab = stage1_clouds; cloudN = STAGE1_NUM_CLOUDS; backdropCol = STAGE1_BACKDROP;
         }
+        // liberer l'ancienne carte AVANT de decompresser le nouveau decor : sinon le tampon
+        // temporaire du tileset (23 Ko) ne tient plus dans le tas avec l'ancienne carte
+        if (bg) { MAP_release(bg); bg = NULL; }
         VDP_loadTileSet(ts, ind, DMA);
-        if (bg) MAP_release(bg);
         bg = MAP_create(md, BG_B, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, ind));
         ind += ts->numTile;
     }
 
     // HUD sur le plan fenêtre (2 lignes du bas), palette 3
-    VDP_setWindowVPos(TRUE, PLAYFIELD_H / 8);
-    VDP_drawImageEx(WINDOW, &hud_image, TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, ind), 0, PLAYFIELD_H / 8, FALSE, TRUE);
-    ind += hud_image.tileset->numTile;
+    {
+        const Image* hi = demoHud ? &hud_demo : &hud_image;
+        VDP_setWindowVPos(TRUE, PLAYFIELD_H / 8);
+        VDP_drawImageEx(WINDOW, hi, TILE_ATTR_FULL(PAL3, TRUE, FALSE, FALSE, ind), 0, PLAYFIELD_H / 8, FALSE, TRUE);
+        ind += hi->tileset->numTile;
+    }
     hudBase = ind;
     VDP_loadTileSet(&hud_tiles, ind, DMA);
     ind += hud_tiles.numTile;
@@ -450,7 +463,13 @@ void STAGE_update(void)
             prevCharged[pn][0] = pl->chargedLevel; prevCharged[pn][1] = pl->chargedX; prevCharged[pn][2] = pl->chargedY;
         }
     }
-    if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On) { BOSS2_start(); boss2On = TRUE; }
+    // boss 2 : la carte du stage n'est plus utilisee (le boss ecrit son propre BAT), et son
+    // tileset (640 tuiles = 20,5 Ko) a besoin du tas libre : on libere la carte avant l'unpack.
+    if ((stageNo == 2) && (stage.frame >= BOSS2_START) && !boss2On)
+    {
+        if (bg) { MAP_release(bg); bg = NULL; }
+        BOSS2_start(); boss2On = TRUE;
+    }
     if ((stageNo == 2) && (stage.frame == BOSS2_START + BOSS2_FRAMES) && (stageClearTimer == 0)) stageClearTimer = 1;
     else if ((stageNo >= 3) && !BOSSN_available(stageNo) && (stage.frame == scrollFrames + 300) && (stageClearTimer == 0)) stageClearTimer = 1;     // provisoire : pas encore de boss
     MUS_stageUpdate(stage.frame);

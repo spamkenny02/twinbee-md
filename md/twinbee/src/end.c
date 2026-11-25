@@ -263,7 +263,7 @@ bool INTRO_replay(void)
     PAL_setColors(0, intro_sign_pal, 32, CPU);
     PAL_setColor(0, 0);
     sprStart(&sinfo[3]);
-    MUS_play(MUS_TITLE); titleMusicOn = TRUE;
+    MUS_playOnce(MUS_TITLE); titleMusicOn = TRUE;   // le thème du titre n'est pas bouclé sur PCE
     SYS_doVBlankProcess();
     t0 = vtimer;
     while ((f = (s32) (vtimer - t0)) < INTRO_NF)
