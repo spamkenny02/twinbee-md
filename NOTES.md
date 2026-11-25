@@ -570,3 +570,13 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Entrees encore muettes** : 33 valeurs pointent vers des bruitages PCE non portes (0B, 11, 1C, 1E, 20..26, 2B..2E, 32, 33, 36..3C, 45, 02..04, 06, 07, 0A) et 2 pistes absentes des 12 converties (97, 9D).
 - **Verifie en headless** (ROM de prod, 3500 images) : OPTION atteint par BAS x2 + START ; SOUND 05 joue 0,7 s (BELLGET 19), 08 muet (1C non porte), 3A joue 0,85 s (FALL 05), 28 lance la musique du titre (8,5 s) et START la coupe a la sortie.
 - **ROM** : 3 407 872 o, CRC32 **7E2314DE**, MD5 f34548f9ee449d1d9b30b1eac4cfc1d5.
+
+## Jalon 56 - test de son : les 46 bruitages PCE portes
+
+- **Objectif** : completer le jalon 55 pour que les 63 valeurs du test de son jouent le son d'origine, et non seulement les 15 bruitages du jeu.
+- **Piege de capture** : l'ecran OPTION revient seul au titre au bout de ~170 s. La capture sfx51.pcm (52 ids a 300 images d'intervalle, 260 s) etait donc polluee par la musique du titre des l'id 0x21, avec 1A muet et des slots 21..3E continus. Recapture en 4 paquets de 20 ids (100 s chacun, analysis/out/sfxA..D), sans contamination (verifie : silence entre chaque son).
+- **Gain** : inchange, +13,55 dB, calcule sur les 15 bruitages de jeu (sfxall.pcm). Deux ids depassant 0 dBFS apres ce gain sont baisses juste ce qu'il faut : 23 (+11,1 dB) et 29 (+9,0 dB). Les 15 WAV de jeu ne sont pas regeneres.
+- **31 nouveaux WAV** (analysis/mksfx3.py, 44,2 s) : 01..04, 06, 07, 0A (echantillons DDA), 0B, 11, 1C, 1E, 20..24, 26, 29, 2B..2E, 32, 33, 36..3B, 45. SFX_playPce(id) (mus.c) mappe les 46 ids : les 15 du jeu gardent canal et priorite via SFX_play, les autres passent sur PCM 3 priorite 2.
+- **Limites** : 5 sons depassent le slot de capture (21, 22, 23, 2B, 45) : tronques a 4,6 s avec fondu de 15 ms. 3C est silencieux sur PCE. Les valeurs 0x33 et 0x34 (ids 97, 9D) restent muettes : pistes absentes des 12 converties.
+- **Verifie en headless** (ROM 30 banques) : 00->0B (1,95 s), 02->11 (0,76), 08->1C (1,2), 0A->1E (1,0), 0B->2D (0,78), 0C->1F (0,66), 0D->23 (4,6), 0E->20 (1,37), 12->22 (4,6), 19->35 (1,05), 1F->45 (4,6), 23->29 (0,9), 36->01 (0,39), 3A->05 (0,74) ; 28 lance la musique du titre et 01 la coupe net.
+- **ROM** : 3 932 160 o (30 banques), CRC32 **96695273**, MD5 3e01b5cadf62608a8385cab8bef25ed7 ; sfx compile 1 056 604 o.

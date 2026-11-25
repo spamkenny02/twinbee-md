@@ -25,6 +25,9 @@ void MUS_saynCueStop(void);
 
 // bruitages PCM (rendus du PSG de la PC Engine, tools/mksfx.py)
 enum { SFX_SHOT = 0, SFX_BOOM, SFX_BELLHIT, SFX_BELLGET, SFX_POWER, SFX_DEATH1, SFX_FALL, SFX_RESP1, SFX_RESP2, SFX_BOMB, SFX_BIG, SFX_BHIT, SFX_BHIT2, SFX_BDEAD, SFX_BXPL, SFX_CURSOR, SFX_SELECT };
-void SFX_play(u16 id);        // appelée chaque frame de stage : lance la musique du stage puis celle du boss
+void SFX_play(u16 id);
+// ID du driver sonore PCE (0x01..0x45) : utilise par le test de son de l'ecran OPTION.
+// Les 15 bruitages de jeu passent par SFX_play ; les autres sont des WAV dedies.
+void SFX_playPce(u16 id);        // appelée chaque frame de stage : lance la musique du stage puis celle du boss
 
 #endif

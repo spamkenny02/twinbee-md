@@ -89,3 +89,59 @@ void SFX_play(u16 id)
                           XGM2_playPCMEx(sfx_start, sizeof(sfx_start), SOUND_PCM_CH2, 3, FALSE, FALSE); break;
     }
 }
+
+// Test de son de l'ecran OPTION : joue l'ID du driver PCE (table  de la ROM).
+// Les 15 bruitages de jeu gardent leur canal/priorite ; les autres, absents du jeu,
+// passent sur le canal PCM 3 avec une priorite basse.
+void SFX_playPce(u16 id)
+{
+    switch (id)
+    {
+        case 0x01: XGM2_playPCMEx(sfx_01, sizeof(sfx_01), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x02: XGM2_playPCMEx(sfx_02, sizeof(sfx_02), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x03: XGM2_playPCMEx(sfx_03, sizeof(sfx_03), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x04: XGM2_playPCMEx(sfx_04, sizeof(sfx_04), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x05: SFX_play(SFX_FALL); break;
+        case 0x06: XGM2_playPCMEx(sfx_06, sizeof(sfx_06), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x07: XGM2_playPCMEx(sfx_07, sizeof(sfx_07), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x08: SFX_play(SFX_RESP2); break;
+        case 0x0A: XGM2_playPCMEx(sfx_0A, sizeof(sfx_0A), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x0B: XGM2_playPCMEx(sfx_0B, sizeof(sfx_0B), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x11: XGM2_playPCMEx(sfx_11, sizeof(sfx_11), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x17: SFX_play(SFX_SHOT); break;
+        case 0x18: SFX_play(SFX_BOMB); break;
+        case 0x19: SFX_play(SFX_BELLGET); break;
+        case 0x1A: SFX_play(SFX_BELLHIT); break;
+        case 0x1B: SFX_play(SFX_BOOM); break;
+        case 0x1C: XGM2_playPCMEx(sfx_1C, sizeof(sfx_1C), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x1D: SFX_play(SFX_BIG); break;
+        case 0x1E: XGM2_playPCMEx(sfx_1E, sizeof(sfx_1E), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x1F: SFX_play(SFX_BHIT); break;
+        case 0x20: XGM2_playPCMEx(sfx_20, sizeof(sfx_20), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x21: XGM2_playPCMEx(sfx_21, sizeof(sfx_21), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x22: XGM2_playPCMEx(sfx_22, sizeof(sfx_22), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x23: XGM2_playPCMEx(sfx_23, sizeof(sfx_23), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x24: XGM2_playPCMEx(sfx_24, sizeof(sfx_24), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x26: XGM2_playPCMEx(sfx_26, sizeof(sfx_26), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x28: SFX_play(SFX_POWER); break;
+        case 0x29: XGM2_playPCMEx(sfx_29, sizeof(sfx_29), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x2B: XGM2_playPCMEx(sfx_2B, sizeof(sfx_2B), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x2C: XGM2_playPCMEx(sfx_2C, sizeof(sfx_2C), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x2D: XGM2_playPCMEx(sfx_2D, sizeof(sfx_2D), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x2E: XGM2_playPCMEx(sfx_2E, sizeof(sfx_2E), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x2F: SFX_play(SFX_DEATH1); break;
+        case 0x31: SFX_play(SFX_RESP1); break;
+        case 0x32: XGM2_playPCMEx(sfx_32, sizeof(sfx_32), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x33: XGM2_playPCMEx(sfx_33, sizeof(sfx_33), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x34: SFX_play(SFX_BDEAD); break;
+        case 0x35: SFX_play(SFX_BHIT2); break;
+        case 0x36: XGM2_playPCMEx(sfx_36, sizeof(sfx_36), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x37: XGM2_playPCMEx(sfx_37, sizeof(sfx_37), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x38: XGM2_playPCMEx(sfx_38, sizeof(sfx_38), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x39: XGM2_playPCMEx(sfx_39, sizeof(sfx_39), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x3A: XGM2_playPCMEx(sfx_3A, sizeof(sfx_3A), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x3B: XGM2_playPCMEx(sfx_3B, sizeof(sfx_3B), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+        case 0x40: SFX_play(SFX_BXPL); break;
+        case 0x45: XGM2_playPCMEx(sfx_45, sizeof(sfx_45), SOUND_PCM_CH3, 2, FALSE, FALSE); break;
+    }
+}

@@ -64,31 +64,21 @@ static const u8 optSoundId[0x3F] = {
 };
 
 // Joue l'entrée courante (touche I sur PCE = B sur MD, A accepté aussi).
-// Les ID sans équivalent MD restent muets : bruitages PCE non portés (0B, 11, 1C, 1E, 20..26,
-// 2B..2E, 32, 33, 36..3C, 45, 01..04, 06, 07, 0A) et pistes 97/9D absentes des 12 converties.
+// Les 46 bruitages référencés par la table sont portés (SFX_playPce) ; restent muettes
+// les valeurs qui pointent vers une piste absente des 12 converties (97, 9D) et 3C,
+// silencieux sur PCE.
 static void soundTestPlay(void)
 {
-    switch (optSoundId[optSound])
+    const u8 id = optSoundId[optSound];
+    if (id == 0x3E)                     // arrêt du driver PCE : coupe musique et bruitages
     {
-        case 0x05: SFX_play(SFX_FALL);    break;
-        case 0x08: SFX_play(SFX_RESP2);   break;
-        case 0x17: SFX_play(SFX_SHOT);    break;
-        case 0x18: SFX_play(SFX_BOMB);    break;
-        case 0x19: SFX_play(SFX_BELLGET); break;
-        case 0x1A: SFX_play(SFX_BELLHIT); break;
-        case 0x1B: SFX_play(SFX_BOOM);    break;
-        case 0x1D: SFX_play(SFX_BIG);     break;
-        case 0x1F: SFX_play(SFX_BHIT);    break;
-        case 0x28: SFX_play(SFX_POWER);   break;
-        case 0x2F: SFX_play(SFX_DEATH1);  break;
-        case 0x31: SFX_play(SFX_RESP1);   break;
-        case 0x34: SFX_play(SFX_BDEAD);   break;
-        case 0x35: SFX_play(SFX_BHIT2);   break;
-        case 0x40: SFX_play(SFX_BXPL);    break;
-        case 0x3E:                        // ID d'arrêt du driver PCE : coupe musique et bruitages
-            MUS_stop();
-            XGM2_stopPCM(SOUND_PCM_CH2); XGM2_stopPCM(SOUND_PCM_CH3);
-            break;
+        MUS_stop();
+        XGM2_stopPCM(SOUND_PCM_CH2); XGM2_stopPCM(SOUND_PCM_CH3);
+        return;
+    }
+    if (id < 0x4D) { SFX_playPce(id); return; }
+    switch (id)
+    {
         case 0x4D: MUS_play(MUS_STAGE1);  break;
         case 0x53: MUS_play(MUS_TITLE);   break;
         case 0x5B: MUS_play(MUS_STAGE1);  break;
