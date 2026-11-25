@@ -11,7 +11,7 @@ SPRITE title_menu3 "title_menu3.png" 6 1 BEST 0
 IMAGE intro_kout "intro_kout.png" BEST ALL
 IMAGE intro_kcol "intro_kcol.png" BEST ALL
 IMAGE intro_sign "intro_sign.png" BEST ALL
-SPRITE intro_spark "intro_spark.png" 2 2 BEST 0
+SPRITE intro_spark "intro_spark.png" 6 3 BEST 0
 IMAGE hud2_image "hud2.png" BEST ALL
 SPRITE spr_body2 "spr_body2.png" 2 2 BEST 0
 SPRITE spr_arm2 "spr_arm2.png" 2 2 BEST 0

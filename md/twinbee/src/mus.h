@@ -4,11 +4,12 @@
 #include <genesis.h>
 
 enum { MUS_TITLE = 0, MUS_STAGE1, MUS_STAGE2, MUS_STAGE3, MUS_STAGE4, MUS_STAGE5, MUS_STAGE6,
-       MUS_BOSS_A, MUS_BOSS_B, MUS_BOSS_6, MUS_CLEAR, MUS_GAMEOVER, MUS_COUNT };
+       MUS_BOSS_A, MUS_BOSS_B, MUS_BOSS_6, MUS_CLEAR, MUS_GAMEOVER, MUS_KONAMI, MUS_COUNT };
 
 void MUS_init(void);
 void MUS_play(u16 track);       // piste bouclée (musique de jeu)
 void MUS_playOnce(u16 track);   // piste jouée une seule fois (thème du titre sur PCE)
+void MUS_playNow(u16 track);    // jingle : lance la piste immédiatement, sans arrêt/rechargement
 void MUS_stop(void);
 void MUS_stageUpdate(s16 frame);
 

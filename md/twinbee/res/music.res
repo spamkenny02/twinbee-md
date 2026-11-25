@@ -1,1 +1,1 @@
-XGM2 mus_all "music/s83.vgm" "music/s91.vgm" "music/s98.vgm" "music/s103.vgm" "music/s108.vgm" "music/s113.vgm" "music/s123.vgm" "music/s128.vgm" "music/s135.vgm" "music/s140.vgm" "music/s145.vgm" "music/s163.vgm" -dr
+XGM2 mus_all "music/s83.vgm" "music/s91.vgm" "music/s98.vgm" "music/s103.vgm" "music/s108.vgm" "music/s113.vgm" "music/s123.vgm" "music/s128.vgm" "music/s135.vgm" "music/s140.vgm" "music/s145.vgm" "music/s163.vgm" "music/s11.vgm" -dr

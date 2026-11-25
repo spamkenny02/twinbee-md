@@ -22,6 +22,8 @@ static void musPlay(u16 track, s8 loop)
 
 void MUS_play(u16 track) { musPlay(track, -1); }
 void MUS_playOnce(u16 track) { musPlay(track, 0); }
+// jingle de boot : piste deja chargee (MUS_init), on la lance sans couper le pilote
+void MUS_playNow(u16 track) { XGM2_setLoopNumber(0); XGM2_playTrack(track); }
 void MUS_stop(void) { XGM2_stop(); }
 
 // Musique de la scene de la princesse : sur PCE c'est une piece dediee de 15,7 s (non bouclee,

@@ -544,3 +544,10 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Écarts spectraux résiduels** (médiane) : 80–500 Hz +1 à +2,5 dB (corps PCM), 3–8 kHz −2 à −5 dB, 8–20 kHz −10 dB (filtre passe-bas du PSG MD, limite matérielle). Le 1,2–3 kHz reste à +4 dB sur le stage 1.
 - **Taille** : `mus_all` = 513 280 o (12 pistes, PCM partagé). ROM de prod **3 407 872 o** (`ROM end $0033FFFF`), CRC32 **`A3F5FC3A`**, MD5 `97DEC2A88B92EC44C61690CD6F732175`.
 - **Vérifié en headless** : boot → titre (musique) → démo stage 1 (musique stage 1) sur 60 s, pas de crash ; pic audio 9 887/32 767 (aucune saturation).
+
+## Jalon 53 — logo Konami : palettes PCE exactes, éclat et jingle de boot
+
+- **Symptôme** : au logo Konami, couleurs approximatives (dégradé reconstruit) et aucun éclat ni jingle. Le code exact du jalon 49 (`tools/mkkonami.py`, `konami_data.h`) n'avait jamais été porté dans l'arbre compilé `md/twinbee` : `intro.c` était resté la version du jalon 48 (images `intro_kout`/`intro_kcol`, sprite d'éclat 3 images, aucun son).
+- **Correctif** : `md/twinbee/src/intro.c` remplacé par la version du jalon 49 (BG PCE 19×22 tuiles, 4 palettes `kon_pal`, rejeu des 261 changements de palette `kon_tl` sur 80 images, trait et éclat 35 images `kon_spk_x0`, cadence `vtimer`) ; `konami_data.h` et `intro_spark.png` (35 images 48×24) importés ; `resources.res` : `SPRITE intro_spark ... 6 3`.
+- **Jingle** : piste XGM2 `s11` (dump PSG du boot PCE `gk11.psg`, 130 images, 1,6 s) ajoutée en **dernière** position de `music.res` → `MUS_KONAMI = 12` (les index 0-11 ne bougent pas) ; `MUS_playNow()` lance la piste déjà chargée à l'image 170 du logo, sans couper le pilote.
+- **Vérifié en headless** : trait + éclat visibles (images 85-105), logo aux couleurs PCE sur fond noir puis blanc (240-360), jingle audible de 3,7 à 5,4 s, scène de vol puis titre intacts, cycle attract 60 s sans crash. ROM **3 407 872 o**, CRC32 **`9B92D4A1`**, MD5 `a1bc65c6bfd7b5df95938c58f0962f0f`.
