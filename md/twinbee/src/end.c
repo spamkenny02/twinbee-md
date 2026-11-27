@@ -4,7 +4,8 @@
 #include <genesis.h>
 #include "end.h"
 #include "mus.h"
-#include "end_data.h"
+#include "stage.h"
+#include "end_data_z.h"
 #include "resources.h"
 #include "end_spr.h"
 #include "end_sprd.h"
@@ -100,16 +101,26 @@ static void sprUpdate(s32 f)
 #define F_C0 133380
 #define F_END 136040
 
-typedef struct { const u32* tiles; const u16* const* maps; const s32* mapf; const u16* pal; u16 ntiles, steps, npal, nmaps; s32 step0; } Scene;
-static const u16* const mapsA[] = { end_a_map0, end_a_map1, end_a_map2, end_a_map3, end_a_map4 };
-static const u16* const mapsB[] = { end_b_map0 };
-static const u16* const mapsC[] = { end_c_map0 };
+typedef struct { const u8* tiles; const u8* const* maps; const s32* mapf; const u8* pal; u16 ntiles, steps, npal, nmaps; s32 step0; } Scene;
+static const u8* const mapsA[] = { end_a_map0, end_a_map1, end_a_map2, end_a_map3, end_a_map4 };
+static const u8* const mapsB[] = { end_b_map0 };
+static const u8* const mapsC[] = { end_c_map0 };
 static const Scene scenes[3] = {
     { end_a_tiles, mapsA, end_a_mapf, end_a_pal, END_A_TILES, END_A_STEPS, END_A_NPAL, END_A_NMAPS, END_A_STEP0 },
     { end_b_tiles, mapsB, end_b_mapf, end_b_pal, END_B_TILES, END_B_STEPS, END_B_NPAL, END_B_NMAPS, END_B_STEP0 },
     { end_c_tiles, mapsC, end_c_mapf, end_c_pal, END_C_TILES, END_C_STEPS, END_C_NPAL, END_C_NMAPS, END_C_STEP0 },
 };
 static s16 curMap;
+
+// fond compresse (LZS) : contextes separes du flux de sprites (tuiles/cartes et palettes)
+static LZSB bgz, palz;
+// Ces deux tampons ne servent que pendant la fin du jeu : on les prend dans le tas au
+// demarrage de ENDING_run et on les rend en sortant. Statiques, ils reservaient 18 Ko de
+// .bss en permanence et le stage 1 ne pouvait plus decompresser son tileset (~21,9 Ko).
+#define END_PAL_WORDS 7360              // chronologie des palettes (max : scene b)
+static u32* endBuf32;                   // fenetre LZS unique (tuiles, cartes puis palettes)
+#define endBuf ((u8*) endBuf32)
+static u16* endPal;
 
 static u16 lerp3(u16 a, u16 b, s16 n)      // n/20 entre deux couleurs MD (3 bits par canal)
 {
@@ -130,32 +141,63 @@ static void setPalette(const Scene* sc, s32 f)
     if (st >= sc->steps - 1) { st = sc->steps - 1; frac = 0; }
     for (k = 0; k < n; k++)
     {
-        const u16 a = sc->pal[st * n + k];
-        buf[k] = frac ? lerp3(a, sc->pal[(st + 1) * n + k], frac) : a;
+        const u16 a = endPal[st * n + k];
+        buf[k] = frac ? lerp3(a, endPal[(st + 1) * n + k], frac) : a;
     }
     PAL_setColors(0, buf, n, DMA);
 }
 
-static void loadScene(const Scene* sc)
+static void lzsReadAll(LZSB* c, const u8* z, u8* d, u16 len)   // flux complet -> RAM
 {
-    VDP_clearPlane(BG_B, TRUE);
-    VDP_loadTileData(sc->tiles, TILE_USER_INDEX, sc->ntiles, CPU);
-    VDP_setTileMapDataRectEx(BG_B, sc->maps[0], TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, 64, 64, 64, CPU);
-    curMap = 0;
+    u16 off = 0;
+    LZSB_open(c, z, endBuf);
+    while (off < len)
+    {
+        u16 n = len - off, i;
+        if (n > 2048) n = 2048;
+        {
+            const u8* p = LZSB_get(c, n);
+            for (i = 0; i < n; i++) d[off + i] = p[i];
+        }
+        off += n;
+    }
 }
 
-static void updateMap(const Scene* sc, s32 f)       // la carte change à des frames précises (visage de la princesse dessiné dans le fond)
+static void loadMap(const u8* z)        // carte 64x64 : 4 bandes de 16 lignes, transferts contigus
+{
+    u16 r;
+    LZSB_open(&bgz, z, endBuf);
+    for (r = 0; r < 64; r += 16)
+        VDP_setTileMapDataRectEx(BG_B, (const u16*) LZSB_get(&bgz, 2048), TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, r, 64, 16, 64, CPU);
+}
+
+static void loadScene(const Scene* sc)
+{
+    u16 i, k, n = sc->npal * 16;
+    VDP_clearPlane(BG_B, TRUE);
+    LZSB_open(&bgz, sc->tiles, endBuf);
+    for (i = 0; i < sc->ntiles; i += k)
+    {
+        k = sc->ntiles - i; if (k > 64) k = 64;
+        VDP_loadTileData((const u32*) LZSB_get(&bgz, (u16) (k * 32)), TILE_USER_INDEX + i, k, CPU);
+    }
+    loadMap(sc->maps[0]);
+    curMap = 0;
+    lzsReadAll(&palz, sc->pal, (u8*) endPal, (u16) (sc->steps * n * 2));
+}
+
+static void updateMap(const Scene* sc, s32 f)       // la carte change a des frames precises (visage de la princesse dans le fond)
 {
     s16 m = 0, k;
     for (k = 0; k < sc->nmaps; k++) if (f >= sc->mapf[k]) m = k;
     if (m != curMap)
     {
-        VDP_setTileMapDataRectEx(BG_B, sc->maps[m], TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, 64, 64, 64, CPU);
+        loadMap(sc->maps[m]);
         curMap = m;
     }
 }
 
-// défilement vertical / horizontal (registres BYR / BXR de la PCE) à la frame PCE f
+
 static s16 splitRow = 224;      // lignes < splitRow : BXR 0 ; au-delà : BXR 256 (dialogue)
 static void scroll(s32 f, s16* bx, s16* by)
 {
@@ -194,6 +236,18 @@ void ENDING_run(void)
     u32 t0;
     s16 sc = -1, prevSc, bx, by;
     u16 prev = JOY_readJoypad(JOY_1);
+    // tampons du fond de la fin, pris dans le tas (ils ne doivent pas rester reserves
+    // pendant les stages : le stage 1 a besoin de ~26 Ko pour decompresser son tileset)
+    STAGE_releaseMap();
+    endBuf32 = MEM_alloc(LZSB_CAP);
+    endPal = MEM_alloc(END_PAL_WORDS * 2);
+    if (!endBuf32 || !endPal)
+    {
+        if (endBuf32) MEM_free(endBuf32);
+        if (endPal) MEM_free(endPal);
+        endBuf32 = NULL; endPal = NULL;
+        return;
+    }
     SPR_reset(); SPR_update();
     VDP_setPlaneSize(64, 64, TRUE);
     VDP_clearPlane(BG_A, TRUE); VDP_clearPlane(BG_B, TRUE); VDP_clearPlane(WINDOW, TRUE);
@@ -242,6 +296,8 @@ void ENDING_run(void)
     VDP_setPlaneSize(64, 32, TRUE);
     VDP_setScrollingMode(HSCROLL_PLANE, VSCROLL_PLANE);
     VDP_setHorizontalScroll(BG_B, 0); VDP_setVerticalScroll(BG_B, 0);
+    MEM_free(endPal); endPal = NULL;
+    MEM_free(endBuf32); endBuf32 = NULL;
 }
 
 // intro de la PCE rejouée : sprites (étoiles, nuages, abeille qui tourne) depuis la trace, fond = entrée 0 de la palette (jour -> nuit -> jour),

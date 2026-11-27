@@ -580,3 +580,23 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 - **Limites** : 5 sons depassent le slot de capture (21, 22, 23, 2B, 45) : tronques a 4,6 s avec fondu de 15 ms. 3C est silencieux sur PCE. Les valeurs 0x33 et 0x34 (ids 97, 9D) restent muettes : pistes absentes des 12 converties.
 - **Verifie en headless** (ROM 30 banques) : 00->0B (1,95 s), 02->11 (0,76), 08->1C (1,2), 0A->1E (1,0), 0B->2D (0,78), 0C->1F (0,66), 0D->23 (4,6), 0E->20 (1,37), 12->22 (4,6), 19->35 (1,05), 1F->45 (4,6), 23->29 (0,9), 36->01 (0,39), 3A->05 (0,74) ; 28 lance la musique du titre et 01 la coupe net.
 - **ROM** : 3 932 160 o (30 banques), CRC32 **96695273**, MD5 3e01b5cadf62608a8385cab8bef25ed7 ; sfx compile 1 056 604 o.
+
+## Jalon 57 - compression du fond de fin, demi-debit, correctif de tas
+
+
+- **Objectif** : passer sous 30 banques sans perte visible, puis corriger le plantage apparu en jeu.
+
+- **Fond de fin compresse** (tools/lzend.py -> src/end_data_z.h) : les 13 tableaux de end_data.h (tuiles, 7 cartes, palettes des 3 scenes) passent de 127 840 a 42 494 o. Decompression verifiee bit a bit contre les tableaux d'origine.
+
+- **Streaming** : le fond tient dans une fenetre LZS de 4 Ko (LZSB, second flux sequentiel independant de celui des sprites). La carte de fin est transferee en 4 bandes de 16 lignes directement depuis la fenetre (pas de tampon de carte, 8 Ko de RAM economises). La chronologie de palette est decompressee en entier au chargement de scene : setPalette reste identique a la version non compressee.
+
+- **Demi-debit** : les 5 longs bruitages tronques (21, 22, 23, 2B, 45) passent en XGM2 6650 Hz (analysis/mksfx4.py : 612 020 -> 306 120 o de PCM, RMS identique). s_story et s_sayn restent en 13,3 kHz. halfRate=TRUE dans mus.c ; signature SGDK verifiee : XGM2_playPCMEx(sample, len, channel, priority, halfRate, loop). En headless, le son 0F du test (id 21) dure 4,62 s, comme avant.
+
+- **Plantage en jeu** : apres le fond de fin compresse, le stage 1 mourait en ILLEGAL INSTRUCTION (PC = 0x4EF90001, octets 4E F9 00 01 des trampolines jmp de la table de vecteurs). Cause : les deux tampons de la fin (endBuf32 4 Ko + endPal 14,7 Ko) etaient statiques ; le tas tombait de 40 236 a 21 388 o alors que STAGE_init demande ~25,7 Ko (tileset APLIB du stage 1 : 683 tuiles x 32 + 8 = 21 864 o, plus 80 sprites x 48 = 3 840 o). MEM_alloc renvoyait NULL et MAP_scrollToEx(NULL, ...) sautait via un pointeur de callback lu en ROM.
+
+- **Correctif** : endBuf32 et endPal deviennent des pointeurs alloues par MEM_alloc au debut de ENDING_run (apres STAGE_releaseMap) et liberes en sortie. .bss retombe a 22 694 o, tas 40 196 o.
+
+- **Verifie en headless** : sequence START x2 -> stage 1, captures 2600..3100 identiques au pixel pres a la ROM du jalon 56 (diff 0,00) ; plus d'ecran d'erreur, le stage s'affiche des la frame 2760. Fin du jeu (160 s, 81 captures) : 67 images identiques, 14 ecarts d'une frame d'animation/de fondu (le compteur de frames de la fin est en temps reel, max 4,8/255 d'ecart moyen) ; texte, palettes et composition identiques.
+
+- **ROM** : 3 670 016 o (28 banques, -262 144 o), CRC32 **06E20EA6**, MD5 94e798c1c7a71f5d953a725a4adedd45 ; sfx compile 904 284 o (contre 1 056 604).
+

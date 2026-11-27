@@ -29,13 +29,13 @@ WAV sfx_11 "sfx/s17.wav" XGM2 13300
 WAV sfx_1C "sfx/s28.wav" XGM2 13300
 WAV sfx_1E "sfx/s30.wav" XGM2 13300
 WAV sfx_20 "sfx/s32.wav" XGM2 13300
-WAV sfx_21 "sfx/s33.wav" XGM2 13300
-WAV sfx_22 "sfx/s34.wav" XGM2 13300
-WAV sfx_23 "sfx/s35.wav" XGM2 13300
+WAV sfx_21 "sfx/s33.wav" XGM2 6650
+WAV sfx_22 "sfx/s34.wav" XGM2 6650
+WAV sfx_23 "sfx/s35.wav" XGM2 6650
 WAV sfx_24 "sfx/s36.wav" XGM2 13300
 WAV sfx_26 "sfx/s38.wav" XGM2 13300
 WAV sfx_29 "sfx/s41.wav" XGM2 13300
-WAV sfx_2B "sfx/s43.wav" XGM2 13300
+WAV sfx_2B "sfx/s43.wav" XGM2 6650
 WAV sfx_2C "sfx/s44.wav" XGM2 13300
 WAV sfx_2D "sfx/s45.wav" XGM2 13300
 WAV sfx_2E "sfx/s46.wav" XGM2 13300
@@ -47,4 +47,4 @@ WAV sfx_38 "sfx/s56.wav" XGM2 13300
 WAV sfx_39 "sfx/s57.wav" XGM2 13300
 WAV sfx_3A "sfx/s58.wav" XGM2 13300
 WAV sfx_3B "sfx/s59.wav" XGM2 13300
-WAV sfx_45 "sfx/s69.wav" XGM2 13300
+WAV sfx_45 "sfx/s69.wav" XGM2 6650
