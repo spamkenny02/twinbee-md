@@ -74,8 +74,7 @@ static void start(void)
 
 static bool wantP2;
 
-// Démo d'attract : le vaisseau suit la trajectoire relevée sur la PC Engine (demo_path.h / demo_path2.h) ;
-// pas de tir (la démo PCE n'en fait pas), vaisseau invincible, 2 vies comme sur PCE.
+// Démo d'attract : suit la trajectoire relevée sur PC Engine, avec tirs et collisions du jeu.
 // START écourte comme sur PCE (retour logo + vol).
 static bool attractDemo(u8 stage, const u8 (*path)[2], u16 frames, bool keepMusic)
 {
@@ -92,19 +91,16 @@ static bool attractDemo(u8 stage, const u8 (*path)[2], u16 frames, bool keepMusi
     PLAYER_init();
     players[0].lives = 2;                                   // « 1P 2 » sur la démo PCE
     gameFrame = 0;
-    debugInvincible = TRUE;
-    for (f = 0; f < frames; f++)
+    debugInvincible = FALSE;
+    players[0].speedLvl = 6;                            // vitesse initiale de la démo : 2 px/image
+    for (f = 0; f < frames && !players[0].gameOver; f++)
     {
         const u16 raw = JOY_readJoypad(JOY_1);
-        const s16 dx = (s16) path[f][0] - players[0].x;
-        const s16 dy = (s16) path[f][1] - players[0].y;
-        u16 joy = 0;
-        if (dx > 0) joy |= BUTTON_RIGHT; else if (dx < 0) joy |= BUTTON_LEFT;
-        if (dy > 0) joy |= BUTTON_DOWN; else if (dy < 0) joy |= BUTTON_UP;
+        // Maintenir B le temps du délai de tir, puis relâcher sans atteindre le seuil de charge.
+        const u16 joy = (f % (SHOT_COOLDOWN + 2) <= SHOT_COOLDOWN) ? BUTTON_B : 0;
         if ((raw & BUTTON_START) && !(prev & BUTTON_START)) { skipped = TRUE; break; }
         prev = raw;
-        players[0].speedLvl = 6;                            // 2 px/image, vitesse de la démo PCE
-        PLAYER_update(0, joy, gameFrame);
+        PLAYER_updateDemo(path[f], joy, gameFrame);
         STAGE_update();
         gameFrame++;
         PLAYER_draw(0);

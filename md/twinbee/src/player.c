@@ -102,7 +102,7 @@ void PLAYER_join(void)
     playerCur = 0;
 }
 
-static void updateShip(u16 joy)
+static void updateShip(u16 joy, const u8* target)
 {
     const s32 spd = 0x80 + P.speedLvl * 0x40;
 
@@ -110,6 +110,13 @@ static void updateShip(u16 joy)
     if (joy & BUTTON_LEFT) V.fx -= spd;
     if (joy & BUTTON_DOWN) V.fy += spd;
     if (joy & BUTTON_UP) V.fy -= spd;
+    // En démo, s'arrêter sur la cible même si elle est à moins d'un pas.
+    if (target)
+    {
+        const s32 x = (s32) target[0] << 8, y = (s32) target[1] << 8;
+        if (((joy & BUTTON_RIGHT) && V.fx > x) || ((joy & BUTTON_LEFT) && V.fx < x)) V.fx = x;
+        if (((joy & BUTTON_DOWN) && V.fy > y) || ((joy & BUTTON_UP) && V.fy < y)) V.fy = y;
+    }
     if (V.fx < ((s32) PLAYER_MIN_X << 8)) V.fx = (s32) PLAYER_MIN_X << 8;
     if (V.fx > ((s32) PLAYER_MAX_X << 8)) V.fx = (s32) PLAYER_MAX_X << 8;
     if (V.fy < ((s32) PLAYER_MIN_Y << 8)) V.fy = (s32) PLAYER_MIN_Y << 8;
@@ -125,7 +132,7 @@ static bool armShown(s16 bit)
     return FALSE;
 }
 
-static void drawShip(u16 joy)
+static void drawShip(u16 joy, bool blink)
 {
     const s16 x = P.x, y = P.y;
     const s16 dl = V.bombT[0] ? 2 : 0, dr = V.bombT[1] ? 2 : 0;
@@ -150,9 +157,9 @@ static void drawShip(u16 joy)
     SPR_setFrame(V.sArmL, V.bombT[0] ? 1 : 0); SPR_setFrame(V.sArmR, V.bombT[1] ? 1 : 0);
     if (V.bombT[0]) V.bombT[0]--;
     if (V.bombT[1]) V.bombT[1]--;
-    P.armHidden = (armShown(1) ? 0 : 1) | (armShown(2) ? 0 : 2);
-    SPR_setVisibility(V.sArmL, armShown(1) ? VISIBLE : HIDDEN);
-    SPR_setVisibility(V.sArmR, armShown(2) ? VISIBLE : HIDDEN);
+    P.armHidden = (blink || !armShown(1) ? 1 : 0) | (blink || !armShown(2) ? 2 : 0);
+    SPR_setVisibility(V.sArmL, (P.armHidden & 1) ? HIDDEN : VISIBLE);
+    SPR_setVisibility(V.sArmR, (P.armHidden & 2) ? HIDDEN : VISIBLE);
 }
 
 static void updateShots(u16 joy, u16 frame)
@@ -350,7 +357,7 @@ void PLAYER_continue(s16 n)
     playerCur = 0;
 }
 
-void PLAYER_update(s16 n, u16 joy, u16 frame)
+static void updatePlayer(s16 n, u16 joy, u16 frame, const u8* target)
 {
     playerCur = n;
     if (P.shield > 0) P.shield--;
@@ -397,7 +404,14 @@ void PLAYER_update(s16 n, u16 joy, u16 frame)
         return;
     }
     if (P.inv) P.inv--;
-    updateShip(joy);
+    const s32 oldX = V.fx;
+    updateShip(joy, target);
+    if (target)    // L'inclinaison suit le mouvement réel, y compris en bord d'écran.
+    {
+        joy &= ~(BUTTON_LEFT | BUTTON_RIGHT);
+        if (V.fx > oldX) joy |= BUTTON_RIGHT;
+        if (V.fx < oldX) joy |= BUTTON_LEFT;
+    }
     {   // historique de position pour les options (trois mini-abeilles, retard de 7, 15 et 23 frames)
         s16 i;
         const bool opt = (P.flags & (PW_OPT1 | PW_OPT2)) != 0;
@@ -412,6 +426,23 @@ void PLAYER_update(s16 n, u16 joy, u16 frame)
     updateShots(joy, frame);
     V.prevJoy = joy;
     V.lastJoy = joy;
+}
+
+void PLAYER_update(s16 n, u16 joy, u16 frame)
+{
+    updatePlayer(n, joy, frame, NULL);
+}
+
+void PLAYER_updateDemo(const u8 target[2], u16 joy, u16 frame)
+{
+    const s32 x = (s32) target[0] << 8, y = (s32) target[1] << 8;
+    const Priv* v = &pv[0];
+
+    if (x > v->fx) joy |= BUTTON_RIGHT;
+    else if (x < v->fx) joy |= BUTTON_LEFT;
+    if (y > v->fy) joy |= BUTTON_DOWN;
+    else if (y < v->fy) joy |= BUTTON_UP;
+    updatePlayer(0, joy, frame, target);
 }
 
 void PLAYER_draw(s16 n)
@@ -430,7 +461,8 @@ void PLAYER_draw(s16 n)
     {
         const bool falling = t > DEATH_EXPLODE;
         // le vaisseau reste 2 frames, disparaît dans l'explosion, puis retombe en tournoyant (corps seul)
-        SPR_setVisibility(V.sArmL, (t <= 2) ? VISIBLE : HIDDEN); SPR_setVisibility(V.sArmR, (t <= 2) ? VISIBLE : HIDDEN);
+        SPR_setVisibility(V.sArmL, (t <= 2 && armShown(1)) ? VISIBLE : HIDDEN);
+        SPR_setVisibility(V.sArmR, (t <= 2 && armShown(2)) ? VISIBLE : HIDDEN);
         SPR_setVisibility(V.sBody, ((t <= 2) || falling) ? VISIBLE : HIDDEN);
         if (falling)
         {
@@ -442,8 +474,8 @@ void PLAYER_draw(s16 n)
     }
     else
     {
-        SPR_setVisibility(V.sBody, blink ? HIDDEN : VISIBLE); SPR_setVisibility(V.sArmL, blink ? HIDDEN : VISIBLE); SPR_setVisibility(V.sArmR, blink ? HIDDEN : VISIBLE);
-        drawShip(V.lastJoy);
+        SPR_setVisibility(V.sBody, blink ? HIDDEN : VISIBLE);
+        drawShip(V.lastJoy, blink);
     }
     {
         s16 i;

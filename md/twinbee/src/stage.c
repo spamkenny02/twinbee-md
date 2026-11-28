@@ -443,7 +443,7 @@ void STAGE_update(void)
         for (pn = 0; pn < 2; pn++)
         {
             static u16 prevBombJoy[2];
-            const u16 j = JOY_readJoypad(pn ? JOY_2 : JOY_1);
+            const u16 j = demoHud ? 0 : JOY_readJoypad(pn ? JOY_2 : JOY_1);
             if (players[pn].active && (players[pn].phase != 3) && (j & BUTTON_C) && !(prevBombJoy[pn] & BUTTON_C)) ENEMY_bombPress(prevPlayerX[pn], prevPlayerY[pn], pn);
             prevBombJoy[pn] = j;
             enemyPlayer[pn].x = prevPlayerX[pn]; enemyPlayer[pn].y = prevPlayerY[pn]; enemyPlayer[pn].on = players[pn].active && (players[pn].phase != 3);

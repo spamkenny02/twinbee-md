@@ -600,3 +600,9 @@ Chaîne : pilote sonore PCE (banque $02, requête = `JSR $E3FC` avec A = identif
 
 - **ROM** : 3 670 016 o (28 banques, -262 144 o), CRC32 **06E20EA6**, MD5 94e798c1c7a71f5d953a725a4adedd45 ; sfx compile 904 284 o (contre 1 056 604).
 
+## Jalon 58 — déplacements, tirs et collisions en démo
+
+- Le suivi des positions des deux démos borne le dernier pas en 8.8 pour éviter de dépasser la cible. L'inclinaison suit le déplacement horizontal réel, y compris au bord de l'écran.
+- La démo simule des appuis répétés sur B avec le délai de tir normal. Le vaisseau subit les collisions, peut perdre un bras, se faire abattre et réapparaître. À zéro vie, la séquence d'attract passe à la scène suivante. Seul START est lu sur la manette pendant la démo.
+- Le clignotement de réapparition masque le corps et les bras ensemble. L'explosion respecte aussi l'état des bras déjà perdus.
+- Vérifié dans Genesis Plus GX sur 18 001 images : alternance des deux démos, tirs et score, pertes de vie et réapparition au stage 1, perte d'un bras au stage 2 et retour au titre. Vérification par trace RAM sur une ROM compilée avec SGDK 2.11 et son GCC 13.2.
